@@ -171,7 +171,8 @@ is_invoice 说明：
             is_invoice=False,
             description=description,
             raw_text=ocr_text,
-            file_path=file_path
+            file_path=file_path,
+            order_number=""
         )
 
 

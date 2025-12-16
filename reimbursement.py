@@ -378,7 +378,8 @@ def process_files(files: List[str], api_key: str = None) -> List[InvoiceInfo]:
                 is_invoice=False,
                 description=f"处理失败: {str(e)}",
                 raw_text="",
-                file_path=file_path
+                file_path=file_path,
+                order_number=""
             ))
 
     return invoice_infos
