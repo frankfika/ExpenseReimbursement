@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import List, Dict
 
-from config import DEEPSEEK_API_KEY, INVOICE_CATEGORIES
+from config import DEEPSEEK_API_KEY, INVOICE_CATEGORIES, get_api_key
 from ocr_handler import extract_text_from_file, is_supported_file
 from invoice_analyzer import analyze_invoice, InvoiceInfo
 from file_organizer import FileOrganizer
@@ -163,6 +163,7 @@ def parse_filename(filename: str, file_path: str, category: str, parent_folder: 
     is_invoice = True
     merchant = ""
     description = ""
+    order_number = ""
 
     # 尝试提取日期 (YYYY-MM-DD)
     date_match = re.search(r'(\d{4}-\d{2}-\d{2})', combined_text)
@@ -175,8 +176,17 @@ def parse_filename(filename: str, file_path: str, category: str, parent_folder: 
     if amount_match:
         amount = float(amount_match.group(1))
 
+    # 尝试提取订单号（10位以上的纯数字，用于配对发票和水单）
+    # 排除金额和日期中的数字
+    order_matches = re.findall(r'(\d{10,})', combined_text)
+    for match in order_matches:
+        # 排除可能是日期的数字（如20241214）
+        if not re.match(r'20\d{6}', match):
+            order_number = match
+            break
+
     # 判断是发票还是凭证
-    if '凭证' in filename or '行程单' in filename:
+    if '凭证' in filename or '行程单' in filename or '水单' in filename:
         is_invoice = False
     elif '发票' in filename:
         is_invoice = True
@@ -211,7 +221,8 @@ def parse_filename(filename: str, file_path: str, category: str, parent_folder: 
         is_invoice=is_invoice,
         description=description,
         raw_text="",
-        file_path=file_path
+        file_path=file_path,
+        order_number=order_number
     )
 
 
@@ -418,13 +429,10 @@ def main():
         regenerate_report(args)
         return
 
-    # 获取 API Key
-    api_key = args.api_key or DEEPSEEK_API_KEY
+    # 获取 API Key（如果未配置会自动引导用户设置）
+    api_key = args.api_key or get_api_key()
     if not api_key:
-        print("错误: 请设置 DeepSeek API 密钥")
-        print("  方式1: 设置环境变量 DEEPSEEK_API_KEY")
-        print("  方式2: 使用 --api-key 参数")
-        print("  方式3: 在 .env 文件中设置 DEEPSEEK_API_KEY=your_key")
+        print("\n❌ 未配置 API Key，无法继续")
         sys.exit(1)
 
     # 获取输入目录

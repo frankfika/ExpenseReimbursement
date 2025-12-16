@@ -63,15 +63,31 @@ pip3 install -r requirements.txt
 
 > 首次安装需要下载 OCR 模型，可能需要几分钟。
 
-### 第二步：配置 API
+### 第二步：首次运行配置
 
-编辑 `.env` 文件：
+直接运行程序，首次会自动引导你配置：
 
-```ini
-DEEPSEEK_API_KEY=你的密钥
+```
+============================================================
+🎉 欢迎使用报销助手！
+============================================================
+
+首次使用需要配置 API Key，只需配置一次，之后就不用再填了。
+
+📖 获取 API Key 步骤：
+------------------------------------------------------------
+1. 打开硅基流动官网注册/登录：
+   👉 https://cloud.siliconflow.cn/i/Wd45d1wI
+   （使用此邀请链接注册可获得额外额度）
+
+2. 登录后，点击左侧菜单「API 密钥」
+3. 点击「新建 API 密钥」，复制生成的密钥
+------------------------------------------------------------
+
+请粘贴你的 API Key（输入后按回车）：
 ```
 
-> 需要 [DeepSeek](https://platform.deepseek.com/) 的 API Key，用于智能分析发票内容。
+> 粘贴你的 API Key 后按回车，配置会自动保存，以后运行就不用再填了！
 
 ### 第三步：开始使用
 
@@ -278,9 +294,15 @@ AI 会根据发票内容智能判断，偶尔可能出错。可以手动将文�
 <details>
 <summary><b>Q: API 调用失败？</b></summary>
 
-1. 检查 `.env` 文件中的 API Key 是否正确
+1. 检查 API Key 是否正确（重新运行程序会提示重新配置）
 2. 确认网络连接正常
-3. 确认 DeepSeek 账户余额充足
+3. 确认硅基流动账户余额充足：https://cloud.siliconflow.cn
+</details>
+
+<details>
+<summary><b>Q: 如何重新配置 API Key？</b></summary>
+
+删除项目目录下的 `.env` 文件，重新运行程序即可重新配置。
 </details>
 
 ---
@@ -289,7 +311,7 @@ AI 会根据发票内容智能判断，偶尔可能出错。可以手动将文�
 
 - **OCR 引擎**: [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) - 百度开源的中文 OCR
 - **PDF 处理**: [PyMuPDF](https://pymupdf.readthedocs.io/) - 高性能 PDF 解析
-- **AI 分析**: [DeepSeek API](https://platform.deepseek.com/) - 大语言模型
+- **AI 分析**: [硅基流动](https://cloud.siliconflow.cn) - 提供 DeepSeek-V3 等多种大模型 API
 - **报表生成**: [OpenPyXL](https://openpyxl.readthedocs.io/) - Excel 文件处理
 
 ---

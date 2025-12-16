@@ -18,10 +18,11 @@ class InvoiceInfo:
     service_date: str  # 实际消费/服务日期 YYYY-MM-DD（打车时间、入住时间等）
     merchant: str  # 商家名称
     invoice_number: str  # 发票号码
-    is_invoice: bool  # True=发票, False=凭证/行程单
+    is_invoice: bool  # True=发票, False=凭证/行程单/水单
     description: str  # 简要描述
     raw_text: str  # 原始OCR文字
     file_path: str  # 文件路径
+    order_number: str = ""  # 订单号（用于配对发票和水单/凭证）
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -45,6 +46,7 @@ class InvoiceAnalyzer:
     "service_date": "YYYY-MM-DD",
     "merchant": "商家/公司名称",
     "invoice_number": "发票号码，如果没有则为空字符串",
+    "order_number": "订单号/交易号/流水号，用于配对发票和水单，如果没有则为空字符串",
     "is_invoice": true或false,
     "description": "简要描述这是什么"
 }
@@ -59,7 +61,7 @@ class InvoiceAnalyzer:
 
 is_invoice 说明：
 - true: 这是正式发票（有发票代码、发票号码、税额等）
-- false: 这是行程单、收据、凭证等非正式发票
+- false: 这是行程单、收据、凭证、水单等非正式发票
 
 日期说明（非常重要）：
 - date: 开票日期（发票上的开票时间）
@@ -152,7 +154,8 @@ is_invoice 说明：
             is_invoice=result.get("is_invoice", True),
             description=result.get("description", ""),
             raw_text=ocr_text,
-            file_path=file_path
+            file_path=file_path,
+            order_number=result.get("order_number", "")
         )
 
     def _create_empty_info(self, file_path: str, description: str, ocr_text: str = "") -> InvoiceInfo:

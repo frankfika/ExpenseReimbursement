@@ -150,6 +150,11 @@ class FileOrganizer:
         """
         score = 0
 
+        # 0. 订单号匹配（最高优先级）- 用于配对发票和水单
+        if voucher.order_number and invoice.order_number:
+            if voucher.order_number == invoice.order_number:
+                score += 10  # 订单号完全匹配，直接配对
+
         # 1. 平台/商家匹配（最重要）
         if self._normalize_merchant(voucher.subtype) == self._normalize_merchant(invoice.subtype):
             score += 3

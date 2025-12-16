@@ -1,14 +1,101 @@
 """配置管理模块"""
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-# 加载 .env 文件
-load_dotenv()
+# 配置文件路径
+CONFIG_DIR = Path(__file__).parent
+ENV_FILE = CONFIG_DIR / ".env"
 
-# DeepSeek API 配置
+# 加载 .env 文件
+load_dotenv(ENV_FILE)
+
+# API 配置（支持硅基流动 SiliconFlow）
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
-DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
-DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.siliconflow.cn")
+DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-ai/DeepSeek-V3")
+
+
+def is_configured() -> bool:
+    """检查是否已配置 API Key"""
+    return bool(DEEPSEEK_API_KEY and DEEPSEEK_API_KEY != "your_api_key_here")
+
+
+def save_config(api_key: str, base_url: str = None, model: str = None) -> None:
+    """保存配置到 .env 文件"""
+    if base_url is None:
+        base_url = "https://api.siliconflow.cn"
+    if model is None:
+        model = "deepseek-ai/DeepSeek-V3"
+
+    config_content = f"""# API 配置（硅基流动 SiliconFlow）
+DEEPSEEK_API_KEY={api_key}
+DEEPSEEK_BASE_URL={base_url}
+DEEPSEEK_MODEL={model}
+"""
+
+    with open(ENV_FILE, "w", encoding="utf-8") as f:
+        f.write(config_content)
+
+    # 重新加载配置
+    load_dotenv(ENV_FILE, override=True)
+
+    # 更新全局变量
+    global DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, DEEPSEEK_MODEL
+    DEEPSEEK_API_KEY = api_key
+    DEEPSEEK_BASE_URL = base_url
+    DEEPSEEK_MODEL = model
+
+
+def setup_wizard() -> bool:
+    """首次配置向导，返回是否配置成功"""
+    print("\n" + "=" * 60)
+    print("🎉 欢迎使用报销助手！")
+    print("=" * 60)
+    print("\n首次使用需要配置 API Key，只需配置一次，之后就不用再填了。\n")
+
+    print("📖 获取 API Key 步骤：")
+    print("-" * 60)
+    print("1. 打开硅基流动官网注册/登录：")
+    print("   👉 https://cloud.siliconflow.cn/i/Wd45d1wI")
+    print("   （使用此邀请链接注册可获得额外额度）\n")
+    print("2. 登录后，点击左侧菜单「API 密钥」")
+    print("3. 点击「新建 API 密钥」，复制生成的密钥")
+    print("-" * 60)
+
+    print("\n请粘贴你的 API Key（输入后按回车）：")
+    api_key = input().strip()
+
+    if not api_key:
+        print("\n❌ 未输入 API Key，配置取消")
+        return False
+
+    # 验证 API Key 格式（硅基流动的 key 通常以 sk- 开头）
+    if not api_key.startswith("sk-"):
+        print("\n⚠️  注意：API Key 通常以 'sk-' 开头，请确认是否正确")
+        confirm = input("是否继续保存？[y/N]: ").strip().lower()
+        if confirm != 'y':
+            print("配置取消")
+            return False
+
+    # 保存配置
+    save_config(api_key)
+
+    print("\n✅ 配置已保存！之后运行将自动使用此配置。")
+    print("=" * 60)
+
+    return True
+
+
+def get_api_key() -> str:
+    """获取 API Key，如果未配置则启动配置向导"""
+    if is_configured():
+        return DEEPSEEK_API_KEY
+
+    if setup_wizard():
+        return DEEPSEEK_API_KEY
+
+    return ""
 
 # 支持的文件格式
 SUPPORTED_IMAGE_FORMATS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"}
