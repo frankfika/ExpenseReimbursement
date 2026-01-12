@@ -28,3 +28,9 @@ ENV/
 ~$*.xlsx
 .vercel
 .env*.local
+
+# PyInstaller 构建产物
+build/
+dist/
+*.spec
+*.dylibs/
