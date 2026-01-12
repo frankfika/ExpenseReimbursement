@@ -49,12 +49,13 @@ if [ -d "dist/ExpenseHelper.app" ]; then
 
     # 创建 DMG
     APP_NAME="ExpenseHelper"
-    DMG_NAME="ExpenseHelper-${VERSION}-macos"
+    DMG_NAME="报销助手-${VERSION}"
     TEMP_DIR="dist/dmg_temp"
+    DMG_TEMP_DIR="dist/dmg_mount"
     RELEASE_DIR="releases/${VERSION_TAG}"
 
     # 清理并创建临时目录
-    rm -rf "$TEMP_DIR"
+    rm -rf "$TEMP_DIR" "$DMG_TEMP_DIR"
     mkdir -p "$TEMP_DIR"
 
     # 复制 .app 到临时目录
@@ -63,15 +64,50 @@ if [ -d "dist/ExpenseHelper.app" ]; then
     # 创建 Applications 链接
     ln -s /Applications "$TEMP_DIR/Applications"
 
-    # 创建 DMG
+    # 先创建一个可读写的临时 DMG
     hdiutil create -volname "报销助手" \
         -srcfolder "$TEMP_DIR" \
-        -ov \
-        -format UDZO \
-        "dist/${DMG_NAME}.dmg"
+        -ov -format UDRW \
+        "dist/${DMG_NAME}_temp.dmg"
 
-    # 清理临时目录
-    rm -rf "$TEMP_DIR"
+    # 挂载临时 DMG 并设置视图
+    mkdir -p "$DMG_TEMP_DIR"
+    hdiutil attach "dist/${DMG_NAME}_temp.dmg" -mountpoint "$DMG_TEMP_DIR" -nobrowse -quiet
+
+    # 使用 AppleScript 设置 Finder 视图
+    osascript <<EOF
+tell application "Finder"
+  tell disk "报销助手"
+    open
+    set current view of container window to icon view
+    set toolbar visible of container window to false
+    set statusbar visible of container window to false
+    set the bounds of container window to {400, 100, 900, 450}
+    set viewOptions to the icon view options of container window
+    set arrangement of viewOptions to not arranged
+    set icon size of viewOptions to 72
+    set position of item "ExpenseHelper.app" of container window to {125, 175}
+    set position of item "Applications" of container window to {375, 175}
+    close
+    update without registering applications
+    delay 2
+  end tell
+end tell
+EOF
+
+    # 同步并卸载
+    sync
+    hdiutil detach "$DMG_TEMP_DIR" -quiet 2>/dev/null || true
+
+    # 压缩成最终 DMG
+    hdiutil convert "dist/${DMG_NAME}_temp.dmg" \
+        -format UDZO \
+        -imagekey zlib-level=9 \
+        -o "dist/${DMG_NAME}.dmg"
+
+    # 清理临时文件
+    rm -f "dist/${DMG_NAME}_temp.dmg"
+    rm -rf "$TEMP_DIR" "$DMG_TEMP_DIR"
 
     # 创建 releases 目录并复制
     echo ""
