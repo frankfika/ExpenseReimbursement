@@ -14,7 +14,7 @@ releases/
 └── README.md
 ```
 
-## 构建流程
+## 本地构建
 
 ### macOS
 ```bash
@@ -43,17 +43,29 @@ pyinstaller --clean --onefile --windowed ^
 copy dist\报销助手.exe releases\v1.0.0\
 ```
 
-## 发布到 GitHub
+## GitHub 自动发布（推荐）
 
-本地构建完成后，使用 GitHub CLI 发布：
+**更简单的方式：使用 GitHub Actions 自动构建和发布**
 
 ```bash
-# 创建 Release 并上传文件
-gh release create v1.0.0 \
-  --title "报销助手 v1.0.0" \
-  --notes "发布说明..." \
-  releases/v1.0.0/*
+# 1. 更新版本号
+echo '1.0.1' > VERSION
+
+# 2. 提交并打 tag
+git add VERSION
+git commit -m "bump: v1.0.1"
+git tag v1.0.1
+
+# 3. 推送 tag（自动触发构建和发布）
+git push origin main --tags
 ```
+
+推送 tag 后，GitHub Actions 会自动：
+- 构建 macOS DMG 和 Windows EXE
+- 创建 GitHub Release
+- 上传安装包到 Release
+
+访问 https://github.com/frankfika/ExpenseReimbursement/releases 下载。
 
 ## 版本管理
 
@@ -65,6 +77,5 @@ gh release create v1.0.0 \
 
 发布新版本时：
 1. 更新 `VERSION` 文件
-2. 运行构建脚本
-3. 发布到 GitHub Releases
-4. 打 git tag: `git tag v1.0.0 && git push --tags`
+2. 创建并推送 git tag
+3. GitHub Actions 自动处理其余工作

@@ -1,7 +1,9 @@
-name: Build Desktop Apps
+name: CI Build
 
 on:
   push:
+    branches: [ main ]
+  pull_request:
     branches: [ main ]
   workflow_dispatch:
 
@@ -58,7 +60,7 @@ jobs:
       with:
         name: macos-dmg
         path: dist/报销助手-${{ steps.version.outputs.VERSION }}.dmg
-        retention-days: 30
+        retention-days: 7
 
   build-windows:
     runs-on: windows-latest
@@ -97,4 +99,4 @@ jobs:
       with:
         name: windows-exe
         path: dist/报销助手-*.exe
-        retention-days: 30
+        retention-days: 7

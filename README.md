@@ -5,8 +5,6 @@
 [![GitHub release](https://img.shields.io/badge/下载-桌面版-blue)](https://github.com/frankfika/ExpenseReimbursement/releases)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
----
-
 ## 它能帮你做什么？
 
 每次出差回来，面对一堆发票是不是很头疼？打车票、火车票、酒店发票、餐饮发票混在一起，还要一张张核对金额、分类整理、制作报销单...
@@ -16,6 +14,23 @@
 1. **扔进去** — 把所有发票扔进去
 2. **等一下** — 自动识别分类
 3. **拿结果** — 分类好的文件夹 + Excel 报表
+
+## 界面预览
+
+### 桌面版
+![桌面版](screenshots/desktop.png)
+
+启动后自动打开窗口，拖拽发票文件即可处理。
+
+### 网页版
+![网页版](screenshots/web.png)
+
+浏览器访问，支持批量上传，处理完下载 ZIP 结果包。
+
+### 报表输出
+![报表](screenshots/report.png)
+
+自动生成 Excel，包含汇总表和明细表。
 
 ---
 
@@ -57,10 +72,12 @@
 **无需安装 Python，开箱即用！**
 
 1. 访问 [Releases 页面](https://github.com/frankfika/ExpenseReimbursement/releases)
-2. 下载对应平台安装包
+2. 下载对应平台安装包：
+   - Mac: `报销助手-1.0.0.dmg`
+   - Windows: `报销助手-1.0.0.exe`
 3. 安装并运行
 
----
+首次运行会引导配置 API Key（只需配置一次）。
 
 ### 开发版
 
@@ -95,16 +112,41 @@ python3 main.py --cli -i ./发票 -o ./报销结果
 
 ---
 
+## 使用流程
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  上传发票    │ →  │  AI识别分类  │ →  │  下载结果    │
+│ (拖拽/选择)  │    │  (自动配对)  │    │  (ZIP+Excel) │
+└─────────────┘    └─────────────┘    └─────────────┘
+```
+
+**输出结果结构：**
+```
+报销结果_20240114/
+├── 打车票/
+│   └── 2024-01-15_滴滴出行_35.00元/
+│       ├── 01_凭证_滴滴出行_35.00元.jpg
+│       └── 02_发票_滴滴出行_35.00元.pdf
+├── 火车飞机票/
+├── 住宿费/
+├── 餐费/
+├── 其他/
+└── 报销统计_20240114.xlsx
+```
+
+---
+
 ## 项目结构
 
 ```
 报销/
 ├── README.md              # 项目说明
+├── VERSION                # 当前版本号
 ├── requirements.txt       # Python 依赖
 ├── main.py                # 统一入口
 │
 ├── app/                   # 核心模块
-│   ├── __init__.py
 │   ├── config.py          # 配置管理
 │   ├── ocr.py             # OCR 文字识别
 │   ├── analyzer.py        # AI 发票分析
@@ -116,35 +158,73 @@ python3 main.py --cli -i ./发票 -o ./报销结果
 │   └── static/            # CSS 样式
 │
 ├── build/                 # 构建脚本
-│   ├── build.sh           # 自动构建（macOS）
-│   ├── build_mac.sh       # 手动构建（macOS）
+│   ├── build.sh           # 自动构建
+│   ├── build_mac.sh       # 手动构建
 │   └── build_mac.spec     # PyInstaller 配置
 │
-├── releases/              # 本地构建产物（不提交）
-│   └── v1.0.0/
-│       ├── 报销助手-Installer.dmg
-│       └── 报销助手.exe
+├── releases/              # 本地构建产物
+│   └── v1.0.0/            # 按版本号组织
+│       ├── 报销助手-1.0.0.dmg
+│       └── 报销助手-1.0.0.exe
 │
-├── core/                  # Vercel API
-├── desktop_app.py         # 桌面版入口
-├── web_app.py             # 网页版入口
-└── reimbursement.py       # 命令行版入口
+└── screenshots/           # 界面截图
 ```
 
 ---
 
-## 输出结果
+## 开发指南
 
-### 文件夹结构
+### 版本管理
 
+采用语义化版本：
+
+| 类型 | 示例 | 说明 |
+|:---|:---|:---|
+| 小更新 | 1.0.0 → 1.0.1 | bug修复、小改进 |
+| 中更新 | 1.0.0 → 1.1.0 | 新增功能 |
+| 大版本 | 1.0.0 → 2.0.0 | 重大变更、不兼容 |
+
+**发布新版本（自动构建）：**
+```bash
+# 1. 更新版本号
+echo '1.0.1' > VERSION
+
+# 2. 提交并打 tag
+git add VERSION
+git commit -m "bump: v1.0.1"
+git tag v1.0.1
+git push origin main --tags
+
+# 3. GitHub Actions 自动构建并创建 Release
+#    访问 https://github.com/frankfika/ExpenseReimbursement/releases 查看结果
 ```
-报销结果_20240114_120000/
-├── 打车票/
-├── 火车飞机票/
-├── 住宿费/
-├── 餐费/
-├── 其他/
-└── 报销统计_20240114_120000.xlsx
+
+**本地构建测试：**
+```bash
+# macOS
+./build/build_mac.sh
+
+# Windows (手动)
+pyinstaller --clean --onefile --windowed --name "报销助手" ...
+```
+
+### 构建桌面版
+
+**macOS:**
+```bash
+./build/build_mac.sh
+```
+
+**Windows:**
+```bash
+pyinstaller --clean --onefile --windowed ^
+  --name "报销助手" ^
+  --add-data "web/templates;web/templates" ^
+  --add-data "web/static;web/static" ^
+  --hidden-import webview ^
+  --hidden-import flask ^
+  --hidden-import paddleocr ^
+  desktop_app.py
 ```
 
 ---
@@ -188,6 +268,16 @@ python3 main.py --cli -i ./发票 -o ./报销结果
 - **AI**: [硅基流动](https://cloud.siliconflow.cn) - 大模型 API
 - **Web**: [Flask](https://flask.palletsprojects.com/) - Web 框架
 - **桌面**: [PyWebView](https://pywebview.flowrl.com/) - 桌面包装
+
+---
+
+## 更新日志
+
+### v1.0.0 (2024-01-12)
+- 首次发布
+- 支持发票识别、自动分类、智能配对
+- 支持桌面版、网页版、命令行版
+- 自动生成 Excel 报表
 
 ---
 
