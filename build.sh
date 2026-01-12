@@ -34,80 +34,20 @@ fi
 # 2. 安装/更新依赖
 echo ""
 echo -e "${YELLOW}[2/5] 检查依赖...${NC}"
-pip3 install -r requirements.txt -q --upgrade
+pip3 install -r requirements.txt -q --upgrade 2>/dev/null || true
 
 # 3. 清理旧文件
 echo ""
 echo -e "${YELLOW}[3/5] 清理旧构建文件...${NC}"
 rm -rf build
 rm -rf dist
-rm -f 报销助手-Installer.dmg 2>/dev/null || true
 
 # 4. 执行打包
 echo ""
 echo -e "${YELLOW}[4/5] 开始打包 (这可能需要几分钟)...${NC}"
 
-# 创建 PyInstaller spec
-cat > build.spec << 'EOF'
-block_cipher = None
-
-a = Analysis(
-    ['desktop_app.py'],
-    pathex=[],
-    binaries=[],
-    datas=[
-        ('templates', 'templates'),
-        ('static', 'static'),
-    ],
-    hiddenimports=[
-        'webview',
-        'flask',
-        'paddleocr',
-        'paddlepaddle',
-        'PIL',
-        'PIL._tkinter_finder',
-        'openpyxl',
-        'fitz',
-        'pdf2image',
-        'requests',
-        'dotenv',
-        'cv2',
-    ],
-    hookspath=[],
-    hooksconfig={},
-    runtime_hooks=[],
-    excludes=['pytest', 'matplotlib', 'IPython'],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=block_cipher,
-    noarchive=False,
-)
-
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
-
-exe = EXE(
-    pyz,
-    a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    [],
-    name='报销助手',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    runtime_tmpdir=None,
-    console=False,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-)
-EOF
-
-python3 -m PyInstaller --clean build.spec
+# 使用 build_mac.sh 的打包方式
+python3 -m PyInstaller --clean build_mac.spec
 
 # 5. 创建 DMG
 echo ""
@@ -117,18 +57,18 @@ APP_NAME="报销助手"
 DMG_NAME="报销助手-Installer"
 TEMP_DIR="dist/dmg_temp"
 
+# 检查 .app 是否存在
+if [ ! -d "dist/${APP_NAME}.app" ]; then
+    echo "错误: 打包失败，未找到 .app 文件"
+    exit 1
+fi
+
 # 清理并创建临时目录
 rm -rf "$TEMP_DIR"
 mkdir -p "$TEMP_DIR"
 
 # 复制 .app 到临时目录
-cp -R "dist/${APP_NAME}.app" "$TEMP_DIR/" 2>/dev/null || true
-
-# 如果 .app 不存在，检查是否打包失败
-if [ ! -d "$TEMP_DIR/${APP_NAME}.app" ]; then
-    echo "错误: 打包失败，未找到 .app 文件"
-    exit 1
-fi
+cp -R "dist/${APP_NAME}.app" "$TEMP_DIR/"
 
 # 创建 Applications 链接
 ln -s /Applications "$TEMP_DIR/Applications"
