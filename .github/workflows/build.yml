@@ -22,6 +22,10 @@ jobs:
         pip install --upgrade pip
         pip install -r requirements.txt
 
+    - name: Read version
+      id: version
+      run: echo "VERSION=$(cat VERSION)" >> $GITHUB_OUTPUT
+
     - name: Build with PyInstaller
       run: |
         pyinstaller --clean --onefile --windowed \
@@ -36,7 +40,8 @@ jobs:
     - name: Create DMG
       run: |
         APP_NAME="报销助手"
-        DMG_NAME="报销助手-Installer"
+        VERSION="${{ steps.version.outputs.VERSION }}"
+        DMG_NAME="报销助手-${VERSION}"
         TEMP_DIR="dist/dmg_temp"
 
         mkdir -p "$TEMP_DIR"
@@ -52,7 +57,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: macos-dmg
-        path: dist/报销助手-Installer.dmg
+        path: dist/报销助手-${{ steps.version.outputs.VERSION }}.dmg
         retention-days: 30
 
   build-windows:
@@ -71,10 +76,15 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
+    - name: Read version
+      id: version
+      run: echo "VERSION=$(cat VERSION)" >> $env:GITHUB_OUTPUT
+
     - name: Build with PyInstaller
       run: |
+        $VERSION = Get-Content VERSION
         pyinstaller --clean --onefile --windowed `
-          --name "报销助手" `
+          --name "报销助手-$VERSION" `
           --add-data "web/templates;web/templates" `
           --add-data "web/static;web/static" `
           --hidden-import webview `
@@ -86,5 +96,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: windows-exe
-        path: dist/报销助手.exe
+        path: dist/报销助手-*.exe
         retention-days: 30
