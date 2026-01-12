@@ -36,7 +36,7 @@ jobs:
     - name: Build macOS app
       run: |
         pyinstaller --clean --onefile --windowed \
-          --name "报销助手" \
+          --name "ExpenseHelper" \
           --add-data "web/templates:web/templates" \
           --add-data "web/static:web/static" \
           --hidden-import webview \
@@ -46,23 +46,19 @@ jobs:
 
     - name: Create DMG
       run: |
-        APP_NAME="报销助手"
+        APP_NAME="ExpenseHelper"
         VERSION="${{ steps.version.outputs.VERSION }}"
-        DMG_NAME="报销助手-${VERSION}"
+        DMG_NAME="ExpenseHelper-${VERSION}-macos"
         TEMP_DIR="dist/dmg_temp"
 
         mkdir -p "$TEMP_DIR"
         cp -R "dist/${APP_NAME}.app" "$TEMP_DIR/"
         ln -s /Applications "$TEMP_DIR/Applications"
 
-        hdiutil create -volname "$APP_NAME" \
+        hdiutil create -volname "报销助手" \
           -srcfolder "$TEMP_DIR" \
           -ov -format UDZO \
           "dist/${DMG_NAME}.dmg"
-
-    # ============ Windows 构建（使用 macOS 交叉编译或跳过）============
-    # 注意：PyInstaller 不支持跨平台构建，这里我们构建 macOS 版本
-    # Windows 版本需要在 Windows runner 上单独构建
 
     # ============ 创建 Release ============
     - name: Generate Release Notes
@@ -73,8 +69,8 @@ jobs:
         ## 报销助手 v${VERSION}
 
         ### 下载安装
-        - **macOS**: 下载 \`报销助手-${VERSION}.dmg\`，双击安装
-        - **Windows**: 下载 \`报销助手-${VERSION}.exe\`，双击安装
+        - **macOS**: 下载 \`ExpenseHelper-${VERSION}-macos.dmg\`，双击安装
+        - **Windows**: 下载 \`ExpenseHelper-${VERSION}-windows.exe\`，双击安装
 
         ### 本版本更新
         - 详细更新日志请查看 [CHANGELOG.md](https://github.com/frankfika/ExpenseReimbursement/blob/main/CHANGELOG.md)
@@ -84,12 +80,12 @@ jobs:
         EOF
         cat release_notes.md
 
-    - name: Create Release (macOS only)
+    - name: Create Release (macOS)
       uses: softprops/action-gh-release@v2
       with:
         name: 报销助手 v${{ steps.version.outputs.VERSION }}
         body_path: release_notes.md
-        files: dist/报销助手-*.dmg
+        files: dist/ExpenseHelper-*.dmg
         draft: false
         prerelease: false
       env:
@@ -122,7 +118,7 @@ jobs:
       run: |
         $VERSION = "${{ steps.version.outputs.VERSION }}"
         pyinstaller --clean --onefile --windowed `
-          --name "报销助手-$VERSION" `
+          --name "ExpenseHelper" `
           --add-data "web/templates;web/templates" `
           --add-data "web/static;web/static" `
           --hidden-import webview `
@@ -130,9 +126,14 @@ jobs:
           --hidden-import paddleocr `
           desktop_app.py
 
+    - name: Rename with version
+      run: |
+        $VERSION = "${{ steps.version.outputs.VERSION }}"
+        Move-Item "dist\ExpenseHelper.exe" "dist\ExpenseHelper-$VERSION-windows.exe"
+
     - name: Upload to Release
       uses: softprops/action-gh-release@v2
       with:
-        files: dist/报销助手-*.exe
+        files: dist/ExpenseHelper-*.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

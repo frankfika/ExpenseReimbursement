@@ -40,16 +40,16 @@ echo "[3/5] 开始打包..."
 python3 -m PyInstaller --clean build/build_mac.spec
 
 echo ""
-if [ -d "dist/报销助手.app" ]; then
+if [ -d "dist/ExpenseHelper.app" ]; then
     echo "[4/5] 打包成功！"
     echo ""
-    echo "输出文件: dist/报销助手.app"
+    echo "输出文件: dist/ExpenseHelper.app"
     echo ""
     echo "创建 DMG 镜像..."
 
     # 创建 DMG
-    APP_NAME="报销助手"
-    DMG_NAME="报销助手-${VERSION}"  # 带版本号
+    APP_NAME="ExpenseHelper"
+    DMG_NAME="ExpenseHelper-${VERSION}-macos"
     TEMP_DIR="dist/dmg_temp"
     RELEASE_DIR="releases/${VERSION_TAG}"
 
@@ -64,7 +64,7 @@ if [ -d "dist/报销助手.app" ]; then
     ln -s /Applications "$TEMP_DIR/Applications"
 
     # 创建 DMG
-    hdiutil create -volname "$APP_NAME" \
+    hdiutil create -volname "报销助手" \
         -srcfolder "$TEMP_DIR" \
         -ov \
         -format UDZO \

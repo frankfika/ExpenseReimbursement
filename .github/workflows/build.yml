@@ -31,7 +31,7 @@ jobs:
     - name: Build with PyInstaller
       run: |
         pyinstaller --clean --onefile --windowed \
-          --name "报销助手" \
+          --name "ExpenseHelper" \
           --add-data "web/templates:web/templates" \
           --add-data "web/static:web/static" \
           --hidden-import webview \
@@ -41,16 +41,16 @@ jobs:
 
     - name: Create DMG
       run: |
-        APP_NAME="报销助手"
+        APP_NAME="ExpenseHelper"
         VERSION="${{ steps.version.outputs.VERSION }}"
-        DMG_NAME="报销助手-${VERSION}"
+        DMG_NAME="ExpenseHelper-${VERSION}-macos"
         TEMP_DIR="dist/dmg_temp"
 
         mkdir -p "$TEMP_DIR"
         cp -R "dist/${APP_NAME}.app" "$TEMP_DIR/"
         ln -s /Applications "$TEMP_DIR/Applications"
 
-        hdiutil create -volname "$APP_NAME" \
+        hdiutil create -volname "报销助手" \
           -srcfolder "$TEMP_DIR" \
           -ov -format UDZO \
           "dist/${DMG_NAME}.dmg"
@@ -59,7 +59,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: macos-dmg
-        path: dist/报销助手-${{ steps.version.outputs.VERSION }}.dmg
+        path: dist/ExpenseHelper-*.dmg
         retention-days: 7
 
   build-windows:
@@ -84,9 +84,9 @@ jobs:
 
     - name: Build with PyInstaller
       run: |
-        $VERSION = Get-Content VERSION
+        $VERSION = "${{ steps.version.outputs.VERSION }}"
         pyinstaller --clean --onefile --windowed `
-          --name "报销助手-$VERSION" `
+          --name "ExpenseHelper" `
           --add-data "web/templates;web/templates" `
           --add-data "web/static;web/static" `
           --hidden-import webview `
@@ -94,9 +94,14 @@ jobs:
           --hidden-import paddleocr `
           desktop_app.py
 
+    - name: Rename with version
+      run: |
+        $VERSION = "${{ steps.version.outputs.VERSION }}"
+        Move-Item "dist\ExpenseHelper.exe" "dist\ExpenseHelper-$VERSION-windows.exe"
+
     - name: Upload EXE
       uses: actions/upload-artifact@v4
       with:
         name: windows-exe
-        path: dist/报销助手-*.exe
+        path: dist/ExpenseHelper-*.exe
         retention-days: 7

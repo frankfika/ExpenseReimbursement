@@ -40,7 +40,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='报销助手',
+    name='ExpenseHelper',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -61,12 +61,12 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='报销助手',
+    name='ExpenseHelper',
 )
 
 app = BUNDLE(
     coll,
-    name='报销助手.app',
+    name='ExpenseHelper.app',
     icon=None,
     bundle_identifier='com.expense.reimbursement',
     info_plist={
