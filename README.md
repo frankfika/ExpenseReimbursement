@@ -52,46 +52,30 @@
 
 ## 快速开始
 
-### 方式一：桌面版（推荐）
+### 桌面版（推荐）
 
 **无需安装 Python，开箱即用！**
 
 1. 访问 [Releases 页面](https://github.com/frankfika/ExpenseReimbursement/releases)
-2. 下载对应平台安装包：
-   - Mac: `报销助手-Installer.dmg`
-   - Windows: `报销助手.exe`
+2. 下载对应平台安装包
 3. 安装并运行
 
-首次运行会引导配置 API Key（只需配置一次）。
-
 ---
 
-### 方式二：网页版
-
-本地开发或局域网使用。
+### 开发版
 
 ```bash
 # 安装依赖
 pip3 install -r requirements.txt
 
-# 启动服务
-python3 web_app.py
-```
+# 启动桌面版
+python3 main.py
 
-浏览器自动打开 `http://localhost:5000`
+# 启动网页版
+python3 main.py --web
 
----
-
-### 方式三：命令行版
-
-适合脚本化、自动化场景。
-
-```bash
-# 安装依赖
-pip3 install -r requirements.txt
-
-# 运行
-python3 reimbursement.py -i ./发票 -o ./报销结果
+# 启动命令行版
+python3 main.py --cli -i ./发票 -o ./报销结果
 ```
 
 ---
@@ -111,6 +95,44 @@ python3 reimbursement.py -i ./发票 -o ./报销结果
 
 ---
 
+## 项目结构
+
+```
+报销/
+├── README.md              # 项目说明
+├── requirements.txt       # Python 依赖
+├── main.py                # 统一入口
+│
+├── app/                   # 核心模块
+│   ├── __init__.py
+│   ├── config.py          # 配置管理
+│   ├── ocr.py             # OCR 文字识别
+│   ├── analyzer.py        # AI 发票分析
+│   ├── organizer.py       # 文件分类整理
+│   └── report.py          # Excel 报表生成
+│
+├── web/                   # 网页资源
+│   ├── templates/         # HTML 模板
+│   └── static/            # CSS 样式
+│
+├── build/                 # 构建脚本
+│   ├── build.sh           # 自动构建（macOS）
+│   ├── build_mac.sh       # 手动构建（macOS）
+│   └── build_mac.spec     # PyInstaller 配置
+│
+├── releases/              # 本地构建产物（不提交）
+│   └── v1.0.0/
+│       ├── 报销助手-Installer.dmg
+│       └── 报销助手.exe
+│
+├── core/                  # Vercel API
+├── desktop_app.py         # 桌面版入口
+├── web_app.py             # 网页版入口
+└── reimbursement.py       # 命令行版入口
+```
+
+---
+
 ## 输出结果
 
 ### 文件夹结构
@@ -118,34 +140,12 @@ python3 reimbursement.py -i ./发票 -o ./报销结果
 ```
 报销结果_20240114_120000/
 ├── 打车票/
-│   ├── 2024-01-15_滴滴出行_35.00元/
-│   │   ├── 01_凭证_滴滴出行_35.00元.jpg
-│   │   └── 02_发票_滴滴出行_35.00元.pdf
-│   └── ...
 ├── 火车飞机票/
 ├── 住宿费/
 ├── 餐费/
 ├── 其他/
 └── 报销统计_20240114_120000.xlsx
 ```
-
-### Excel 报表
-
-**汇总表**
-
-| 类别 | 数量 | 金额（元） |
-|:---|:---:|---:|
-| 打车票 | 4 | 186.50 |
-| 火车飞机票 | 2 | 1,256.00 |
-| 住宿费 | 3 | 897.00 |
-| 餐费 | 2 | 156.00 |
-| **合计** | **11** | **2,495.50** |
-
-**明细表**（每个类别一个 Sheet）
-
-| 序号 | 日期 | 商家 | 金额 | 发票号 | 类型 |
-|:---:|:---|:---|---:|:---|:---:|
-| 1 | 2024-01-15 | 滴滴出行 | 35.00 | 12345678 | 发票 |
 
 ---
 

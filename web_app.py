@@ -17,14 +17,12 @@ from pathlib import Path
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, send_file, after_this_request
 
-# 导入现有模块
-from config import DEEPSEEK_API_KEY, INVOICE_CATEGORIES, is_configured, setup_wizard
-from ocr_handler import extract_text_from_file, is_supported_file
-from invoice_analyzer import analyze_invoice, InvoiceInfo
-from file_organizer import FileOrganizer
-from report_generator import generate_report
+# 导入核心模块
+from app import DEEPSEEK_API_KEY, INVOICE_CATEGORIES, is_configured, setup_wizard
+from app import extract_text_from_file, is_supported_file
+from app import analyze_invoice, InvoiceInfo, FileOrganizer, generate_report
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='web/templates', static_folder='web/static')
 
 # 配置
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB 总上传限制

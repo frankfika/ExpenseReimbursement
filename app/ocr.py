@@ -6,7 +6,7 @@ import fitz  # PyMuPDF
 from PIL import Image
 import io
 
-from config import SUPPORTED_IMAGE_FORMATS, SUPPORTED_PDF_FORMAT
+from .config import SUPPORTED_IMAGE_FORMATS, SUPPORTED_PDF_FORMAT
 
 
 class OCRHandler:

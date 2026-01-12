@@ -30,7 +30,7 @@ ENV/
 .env*.local
 
 # PyInstaller 构建产物
-build/
 dist/
-*.spec
+build/build/
+build/*.spec.bak
 *.dylibs/

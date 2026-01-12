@@ -12,11 +12,9 @@ import sys
 from pathlib import Path
 from typing import List, Dict
 
-from config import DEEPSEEK_API_KEY, INVOICE_CATEGORIES, get_api_key
-from ocr_handler import extract_text_from_file, is_supported_file
-from invoice_analyzer import analyze_invoice, InvoiceInfo
-from file_organizer import FileOrganizer
-from report_generator import generate_report
+from app import DEEPSEEK_API_KEY, INVOICE_CATEGORIES, get_api_key
+from app import extract_text_from_file, is_supported_file
+from app import analyze_invoice, InvoiceInfo, FileOrganizer, generate_report
 
 
 def scan_files(input_dir: str) -> List[str]:
@@ -228,8 +226,7 @@ def parse_filename(filename: str, file_path: str, category: str, parent_folder: 
 
 def analyze_file_with_ai(file_path: str, category: str, api_key: str = None) -> InvoiceInfo:
     """使用 AI 分析文件内容"""
-    from ocr_handler import extract_text_from_file
-    from invoice_analyzer import analyze_invoice
+    from app import extract_text_from_file, analyze_invoice
 
     try:
         # OCR 提取文字

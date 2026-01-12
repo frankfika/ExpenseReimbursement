@@ -5,7 +5,7 @@ from dataclasses import dataclass, asdict
 from typing import Optional
 import requests
 
-from config import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, DEEPSEEK_MODEL
+from .config import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, DEEPSEEK_MODEL
 
 
 @dataclass

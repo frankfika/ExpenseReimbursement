@@ -21,7 +21,7 @@ def start_flask():
     from web_app import app
 
     # 检查配置
-    from config import is_configured, setup_wizard
+    from app import is_configured, setup_wizard
     if not is_configured():
         print("\n" + "=" * 50)
         print("首次运行，需要配置 API Key")

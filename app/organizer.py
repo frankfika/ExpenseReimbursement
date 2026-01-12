@@ -7,8 +7,8 @@ from typing import List, Dict, Tuple
 from datetime import datetime, timedelta
 from collections import defaultdict
 
-from config import INVOICE_CATEGORIES, PENDING_CATEGORY
-from invoice_analyzer import InvoiceInfo
+from .config import INVOICE_CATEGORIES, PENDING_CATEGORY
+from .analyzer import InvoiceInfo
 
 
 class FileOrganizer:

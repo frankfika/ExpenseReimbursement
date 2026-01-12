@@ -7,8 +7,8 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 from openpyxl.utils import get_column_letter
 
-from invoice_analyzer import InvoiceInfo
-from config import INVOICE_CATEGORIES
+from .analyzer import InvoiceInfo
+from .config import INVOICE_CATEGORIES
 
 
 class ReportGenerator:

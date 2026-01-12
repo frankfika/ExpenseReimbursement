@@ -26,8 +26,8 @@ jobs:
       run: |
         pyinstaller --clean --onefile --windowed \
           --name "报销助手" \
-          --add-data "templates:templates" \
-          --add-data "static:static" \
+          --add-data "web/templates:web/templates" \
+          --add-data "web/static:web/static" \
           --hidden-import webview \
           --hidden-import flask \
           --hidden-import paddleocr \
@@ -75,8 +75,8 @@ jobs:
       run: |
         pyinstaller --clean --onefile --windowed `
           --name "报销助手" `
-          --add-data "templates;templates" `
-          --add-data "static;static" `
+          --add-data "web/templates;web/templates" `
+          --add-data "web/static;web/static" `
           --hidden-import webview `
           --hidden-import flask `
           --hidden-import paddleocr `
