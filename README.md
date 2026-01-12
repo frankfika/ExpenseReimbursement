@@ -71,11 +71,16 @@
 
 **无需安装 Python，开箱即用！**
 
-1. 访问 [Releases 页面](https://github.com/frankfika/ExpenseReimbursement/releases)
+1. 访问 [Releases 页面](https://github.com/frankfika/ExpenseReimbursement/releases) 下载最新版本
 2. 下载对应平台安装包：
-   - Mac: `报销助手-1.0.0.dmg`
-   - Windows: `报销助手-1.0.0.exe`
-3. 安装并运行
+
+| 平台 | 文件名 | 大小 |
+|:---|:---|:---|
+| macOS | `报销助手-x.x.x.dmg` | ~300 MB |
+| Windows | `ExpenseHelper-x.x.x-windows.exe` | ~150 MB |
+
+3. **macOS**: 双击 DMG，将应用拖到 Applications 文件夹
+4. **Windows**: 双击 EXE，按提示安装
 
 首次运行会引导配置 API Key（只需配置一次）。
 
