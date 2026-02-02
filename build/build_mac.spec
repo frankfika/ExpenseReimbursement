@@ -10,6 +10,10 @@ block_cipher = None
 # 项目根目录
 project_root = Path(SPECPATH).parent
 
+# 动态读取版本号
+version_file = project_root / 'VERSION'
+VERSION = version_file.read_text().strip() if version_file.exists() else '1.0.0'
+
 a = Analysis(
     [str(project_root / 'desktop_app.py')],
     pathex=[str(project_root)],
@@ -128,8 +132,8 @@ app = BUNDLE(
     info_plist={
         'CFBundleName': 'ExpenseHelper',
         'CFBundleDisplayName': 'ExpenseHelper',
-        'CFBundleVersion': '1.0.0',
-        'CFBundleShortVersionString': '1.0.0',
+        'CFBundleVersion': VERSION,
+        'CFBundleShortVersionString': VERSION,
         'NSHighResolutionCapable': True,
         'LSMinimumSystemVersion': '10.13.0',
         'NSRequiresAquaSystemAppearance': False,

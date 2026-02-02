@@ -146,8 +146,26 @@ def find_free_port(start_port=5000, max_retries=10):
     return start_port
 
 
+def wait_for_server(host, port, timeout=30, interval=0.1):
+    """等待服务器启动完成"""
+    import socket
+    import time
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(1)
+                s.connect((host, port))
+                return True
+        except (socket.error, OSError):
+            time.sleep(interval)
+    return False
+
+
 # 全局端口变量
 flask_port = 5000
+# Flask 服务就绪事件
+flask_ready = threading.Event()
 
 
 def start_flask():
@@ -165,6 +183,16 @@ def start_flask():
 
     # 查找可用端口
     flask_port = find_free_port(5000)
+
+    # 在单独线程中等待服务器启动并设置就绪事件
+    def signal_ready():
+        if wait_for_server('127.0.0.1', flask_port, timeout=30):
+            flask_ready.set()
+            logger.info(f"Flask 服务已在端口 {flask_port} 就绪")
+        else:
+            logger.error("Flask 服务启动超时")
+
+    threading.Thread(target=signal_ready, daemon=True).start()
 
     try:
         app.run(host='127.0.0.1', port=flask_port, debug=False, threaded=True, use_reloader=False)
@@ -193,9 +221,11 @@ def main():
     flask_thread = threading.Thread(target=start_flask, daemon=True)
     flask_thread.start()
 
-    # 等待 Flask 启动
-    import time
-    time.sleep(2)
+    # 等待 Flask 服务就绪（最多等待 30 秒）
+    if not flask_ready.wait(timeout=30):
+        logger.error("Flask 服务启动超时，尝试继续...")
+    else:
+        logger.info("Flask 服务已就绪")
 
     # 先创建窗口（不带 API）
     main_window = webview.create_window(

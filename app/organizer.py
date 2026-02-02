@@ -103,41 +103,40 @@ class FileOrganizer:
         2. 日期相同或相近（±1天）
         3. 金额相同或相近（±1%）
         """
-        # 分离发票和凭证
-        invoices = [i for i in invoice_infos if i.is_invoice]
-        vouchers = [i for i in invoice_infos if not i.is_invoice]
+        # 分离发票和凭证，保留索引用于追踪
+        invoices = [(idx, i) for idx, i in enumerate(invoice_infos) if i.is_invoice]
+        vouchers = [(idx, i) for idx, i in enumerate(invoice_infos) if not i.is_invoice]
 
         paired_groups = []
-        used_vouchers = set()
-        used_invoices = set()
+        used_invoice_indices = set()
 
         # 尝试配对
-        for voucher in vouchers:
+        for voucher_idx, voucher in vouchers:
             best_match = None
+            best_match_idx = None
             best_score = 0
 
-            for invoice in invoices:
-                if id(invoice) in used_invoices:
+            for invoice_idx, invoice in invoices:
+                if invoice_idx in used_invoice_indices:
                     continue
 
                 score = self._calculate_match_score(voucher, invoice)
                 if score > best_score and score >= 2:  # 至少匹配2个条件
                     best_score = score
                     best_match = invoice
+                    best_match_idx = invoice_idx
 
             if best_match:
                 # 找到配对
                 paired_groups.append([voucher, best_match])
-                used_vouchers.add(id(voucher))
-                used_invoices.add(id(best_match))
+                used_invoice_indices.add(best_match_idx)
             else:
                 # 未配对的凭证单独一组
                 paired_groups.append([voucher])
-                used_vouchers.add(id(voucher))
 
         # 未配对的发票单独一组
-        for invoice in invoices:
-            if id(invoice) not in used_invoices:
+        for invoice_idx, invoice in invoices:
+            if invoice_idx not in used_invoice_indices:
                 paired_groups.append([invoice])
 
         return paired_groups

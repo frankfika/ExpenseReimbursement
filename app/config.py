@@ -18,8 +18,8 @@ def get_config_dir() -> Path:
         config_dir.mkdir(parents=True, exist_ok=True)
         return config_dir
     else:
-        # 开发环境
-        return Path(__file__).parent
+        # 开发环境 - 使用项目根目录（app 的父目录）
+        return Path(__file__).parent.parent
 
 
 # 配置文件路径
@@ -33,6 +33,13 @@ load_dotenv(ENV_FILE)
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.siliconflow.cn")
 DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-ai/DeepSeek-V3")
+
+# 视觉模型配置（用于直接分析图片，无需本地 OCR）
+VISION_MODEL = os.getenv("VISION_MODEL", "Qwen/Qwen2.5-VL-7B-Instruct")
+# 可选视觉模型：
+# - Qwen/Qwen2.5-VL-7B-Instruct （推荐，免费额度多）
+# - Pro/Qwen/Qwen2-VL-7B-Instruct
+# - deepseek-ai/deepseek-vl2 （如果可用）
 
 
 def is_configured() -> bool:
@@ -55,6 +62,13 @@ DEEPSEEK_MODEL={model}
 
     with open(ENV_FILE, "w", encoding="utf-8") as f:
         f.write(config_content)
+
+    # 设置文件权限为仅所有者可读写（保护 API Key）
+    try:
+        os.chmod(ENV_FILE, 0o600)
+    except OSError:
+        # Windows 可能不支持 chmod，忽略错误
+        pass
 
     # 重新加载配置
     load_dotenv(ENV_FILE, override=True)

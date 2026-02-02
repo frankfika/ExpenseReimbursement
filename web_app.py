@@ -20,7 +20,7 @@ from flask import Flask, render_template, request, jsonify, send_file, after_thi
 # 导入核心模块
 from app import DEEPSEEK_API_KEY, INVOICE_CATEGORIES, is_configured, setup_wizard
 from app import extract_text_from_file, is_supported_file
-from app import analyze_invoice, InvoiceInfo, FileOrganizer, generate_report
+from app import analyze_invoice, analyze_invoice_vision, InvoiceInfo, FileOrganizer, generate_report
 
 # 确定模板和静态文件夹路径（支持打包环境）
 import sys
@@ -40,10 +40,78 @@ app = Flask(__name__, template_folder=template_folder, static_folder=static_fold
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB 总上传限制
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'bmp', 'tiff', 'webp', 'pdf'}
 
-# 任务存储（内存中）
-tasks = {}
-# 任务操作锁（保护 tasks 字典的并发访问）
-tasks_lock = threading.Lock()
+# 任务管理器配置
+MAX_TASKS = 100  # 最大任务数
+
+
+class TaskManager:
+    """任务管理器 - 管理任务生命周期，防止内存泄漏"""
+
+    def __init__(self, max_tasks: int = MAX_TASKS):
+        self.tasks = {}
+        self.lock = threading.Lock()
+        self.max_tasks = max_tasks
+
+    def add(self, task_id: str, task_data: dict) -> None:
+        """添加任务，如果超过限制则清理最旧的任务"""
+        with self.lock:
+            # 如果超过最大任务数，清理最旧的任务
+            while len(self.tasks) >= self.max_tasks:
+                self._cleanup_oldest()
+            self.tasks[task_id] = task_data
+
+    def get(self, task_id: str) -> dict:
+        """获取任务"""
+        return self.tasks.get(task_id)
+
+    def __contains__(self, task_id: str) -> bool:
+        """检查任务是否存在"""
+        return task_id in self.tasks
+
+    def __getitem__(self, task_id: str) -> dict:
+        """获取任务（字典风格访问）"""
+        return self.tasks[task_id]
+
+    def remove(self, task_id: str) -> None:
+        """移除任务"""
+        with self.lock:
+            if task_id in self.tasks:
+                del self.tasks[task_id]
+
+    def items(self):
+        """返回任务项"""
+        return list(self.tasks.items())
+
+    def clear(self):
+        """清空所有任务"""
+        self.tasks.clear()
+
+    def _cleanup_oldest(self) -> None:
+        """清理最旧的任务（内部方法，调用前应持有锁）"""
+        if not self.tasks:
+            return
+        # 按创建时间排序，清理最旧的
+        oldest_id = min(
+            self.tasks.keys(),
+            key=lambda k: self.tasks[k].get('created_at', '')
+        )
+        task = self.tasks[oldest_id]
+        # 清理文件
+        if 'temp_dir' in task and os.path.exists(task['temp_dir']):
+            shutil.rmtree(task['temp_dir'], ignore_errors=True)
+        if 'output_dir' in task and os.path.exists(task['output_dir']):
+            shutil.rmtree(task['output_dir'], ignore_errors=True)
+        if 'zip_path' in task and os.path.exists(task['zip_path']):
+            os.remove(task['zip_path'])
+        del self.tasks[oldest_id]
+        print(f"[清理] 任务数超限，已清理最旧任务 {oldest_id}")
+
+
+# 任务管理器实例
+task_manager = TaskManager()
+# 兼容旧代码的引用
+tasks = task_manager.tasks
+tasks_lock = task_manager.lock
 
 
 def allowed_file(filename):
@@ -56,8 +124,8 @@ def cleanup_task(task_id, delay=1800):
     def do_cleanup():
         time.sleep(delay)
         with tasks_lock:
-            if task_id in tasks:
-                task = tasks[task_id]
+            if task_id in task_manager:
+                task = task_manager[task_id]
                 # 删除临时目录
                 if 'temp_dir' in task and os.path.exists(task['temp_dir']):
                     shutil.rmtree(task['temp_dir'], ignore_errors=True)
@@ -65,7 +133,7 @@ def cleanup_task(task_id, delay=1800):
                     shutil.rmtree(task['output_dir'], ignore_errors=True)
                 if 'zip_path' in task and os.path.exists(task['zip_path']):
                     os.remove(task['zip_path'])
-                del tasks[task_id]
+                task_manager.remove(task_id)
                 print(f"[清理] 已删除任务 {task_id} 的临时文件")
 
     thread = threading.Thread(target=do_cleanup, daemon=True)
@@ -75,14 +143,14 @@ def cleanup_task(task_id, delay=1800):
 def cleanup_all_tasks():
     """服务器关闭时清理所有任务"""
     with tasks_lock:
-        for task_id, task in list(tasks.items()):
+        for task_id, task in task_manager.items():
             if 'temp_dir' in task and os.path.exists(task['temp_dir']):
                 shutil.rmtree(task['temp_dir'], ignore_errors=True)
             if 'output_dir' in task and os.path.exists(task['output_dir']):
                 shutil.rmtree(task['output_dir'], ignore_errors=True)
             if 'zip_path' in task and os.path.exists(task['zip_path']):
                 os.remove(task['zip_path'])
-        tasks.clear()
+        task_manager.clear()
         print("[清理] 已清理所有临时文件")
 
 
@@ -92,9 +160,16 @@ atexit.register(cleanup_all_tasks)
 
 def process_task(task_id):
     """后台处理上传的文件"""
+    from app.config import DEEPSEEK_BASE_URL
     task = tasks[task_id]
     temp_dir = task['temp_dir']
     output_dir = task['output_dir']
+
+    # 自动检测是否使用视觉模型：硅基流动支持视觉模型，DeepSeek 需要用本地 OCR
+    is_siliconflow = 'siliconflow' in DEEPSEEK_BASE_URL.lower()
+    use_vision = task.get('use_vision', is_siliconflow)
+
+    print(f"[处理] API: {DEEPSEEK_BASE_URL}, 使用视觉模型: {use_vision}")
 
     try:
         # 获取 API Key
@@ -125,10 +200,13 @@ def process_task(task_id):
             task['current_file'] = Path(file_path).name
 
             try:
-                # OCR 提取
-                ocr_text = extract_text_from_file(file_path)
-                # AI 分析
-                info = analyze_invoice(ocr_text, file_path, api_key)
+                if use_vision:
+                    # 使用视觉模型直接分析图片（推荐，无需本地OCR）
+                    info = analyze_invoice_vision(file_path, api_key)
+                else:
+                    # 使用本地 OCR + API 文本分析
+                    ocr_text = extract_text_from_file(file_path)
+                    info = analyze_invoice(ocr_text, file_path, api_key)
                 invoice_infos.append(info)
             except Exception as e:
                 # 创建错误记录
@@ -305,15 +383,14 @@ def upload():
         return jsonify({'error': '没有有效的文件（仅支持 jpg/png/pdf）'}), 400
 
     # 初始化任务状态
-    with tasks_lock:
-        tasks[task_id] = {
-            'status': 'queued',
-            'temp_dir': temp_dir,
-            'output_dir': output_dir,
-            'total': saved_count,
-            'current': 0,
-            'created_at': datetime.now().isoformat()
-        }
+    task_manager.add(task_id, {
+        'status': 'queued',
+        'temp_dir': temp_dir,
+        'output_dir': output_dir,
+        'total': saved_count,
+        'current': 0,
+        'created_at': datetime.now().isoformat()
+    })
 
     # 启动后台处理
     thread = threading.Thread(target=process_task, args=(task_id,), daemon=True)
@@ -361,15 +438,14 @@ def upload_from_paths(file_paths):
         return jsonify({'error': '没有有效的文件（仅支持 jpg/png/pdf）'}), 400
 
     # 初始化任务状态
-    with tasks_lock:
-        tasks[task_id] = {
-            'status': 'queued',
-            'temp_dir': temp_dir,
-            'output_dir': output_dir,
-            'total': saved_count,
-            'current': 0,
-            'created_at': datetime.now().isoformat()
-        }
+    task_manager.add(task_id, {
+        'status': 'queued',
+        'temp_dir': temp_dir,
+        'output_dir': output_dir,
+        'total': saved_count,
+        'current': 0,
+        'created_at': datetime.now().isoformat()
+    })
 
     # 启动后台处理
     thread = threading.Thread(target=process_task, args=(task_id,), daemon=True)
@@ -428,13 +504,13 @@ def download(task_id):
         def quick_cleanup():
             time.sleep(60)
             with tasks_lock:
-                if task_id in tasks:
-                    t = tasks[task_id]
+                if task_id in task_manager:
+                    t = task_manager[task_id]
                     if 'output_dir' in t and os.path.exists(t['output_dir']):
                         shutil.rmtree(t['output_dir'], ignore_errors=True)
                     if 'zip_path' in t and os.path.exists(t['zip_path']):
                         os.remove(t['zip_path'])
-                    del tasks[task_id]
+                    task_manager.remove(task_id)
                     print(f"[清理] 下载后已删除任务 {task_id}")
         threading.Thread(target=quick_cleanup, daemon=True).start()
         return response
