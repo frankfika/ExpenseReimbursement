@@ -34,8 +34,6 @@ def get_image_mime_type(file_path: str) -> str:
 class OCRHandler:
     """OCR 处理器 - 使用本地 PaddleOCR"""
 
-    _INIT_FAILED = object()  # 初始化失败的哨兵值
-
     def __init__(self):
         self._ocr = None
         self._initialized = False

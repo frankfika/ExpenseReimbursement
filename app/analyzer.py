@@ -535,7 +535,7 @@ def get_analyzer(api_key: str = None, use_api: bool = True) -> InvoiceAnalyzer:
     global _api_analyzer, _api_analyzer_key
     actual_key = api_key or DEEPSEEK_API_KEY
     if _api_analyzer is None or _api_analyzer_key != actual_key:
-        _api_analyzer = InvoiceAnalyzer(api_key)
+        _api_analyzer = InvoiceAnalyzer(actual_key)
         _api_analyzer_key = actual_key
     return _api_analyzer
 
@@ -553,7 +553,7 @@ def get_vision_analyzer(api_key: str = None) -> VisionAnalyzer:
     global _vision_analyzer, _vision_analyzer_key
     actual_key = api_key or DEEPSEEK_API_KEY
     if _vision_analyzer is None or _vision_analyzer_key != actual_key:
-        _vision_analyzer = VisionAnalyzer(api_key)
+        _vision_analyzer = VisionAnalyzer(actual_key)
         _vision_analyzer_key = actual_key
     return _vision_analyzer
 

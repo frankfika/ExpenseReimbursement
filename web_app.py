@@ -129,7 +129,8 @@ def cleanup_task(task_id, delay=1800):
                     shutil.rmtree(task['output_dir'], ignore_errors=True)
                 if 'zip_path' in task and os.path.exists(task['zip_path']):
                     os.remove(task['zip_path'])
-                task_manager.remove(task_id)
+                # 直接操作内部 dict，避免 remove() 重复加锁导致死锁
+                del task_manager.tasks[task_id]
                 print(f"[清理] 已删除任务 {task_id} 的临时文件")
 
     thread = threading.Thread(target=do_cleanup, daemon=True)
@@ -504,7 +505,8 @@ def download(task_id):
                         shutil.rmtree(t['output_dir'], ignore_errors=True)
                     if 'zip_path' in t and os.path.exists(t['zip_path']):
                         os.remove(t['zip_path'])
-                    task_manager.remove(task_id)
+                    # 直接操作内部 dict，避免 remove() 重复加锁导致死锁
+                    del task_manager.tasks[task_id]
                     print(f"[清理] 下载后已删除任务 {task_id}")
         threading.Thread(target=quick_cleanup, daemon=True).start()
         return response
