@@ -9,11 +9,14 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  # macOS 构建 + 创建 Release
+  build-macos:
     runs-on: macos-latest
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # 拉取完整历史，用于生成 changelog
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -32,7 +35,6 @@ jobs:
         echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
         echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-    # ============ macOS 构建 ============
     - name: Build macOS app
       run: |
         pyinstaller --clean --onedir --windowed \
@@ -47,9 +49,7 @@ jobs:
           --exclude-module test \
           --exclude-module unittest \
           --exclude-module pydoc \
-          --exclude-module argparse \
           --exclude-module http.server \
-          --exclude-module ssl \
           --strip \
           --optimize 2 \
           desktop_app.py
@@ -65,40 +65,68 @@ jobs:
         cp -R "dist/${APP_NAME}.app" "$TEMP_DIR/"
         ln -s /Applications "$TEMP_DIR/Applications"
 
-        # Create compressed DMG directly
         hdiutil create -volname "ExpenseHelper" \
           -srcfolder "$TEMP_DIR" \
           -ov -format UDZO \
           -imagekey zlib-level=9 \
           "dist/${DMG_NAME}.dmg"
 
-        # Cleanup
         rm -rf "$TEMP_DIR"
 
-    # ============ 创建 Release ============
-    - name: Generate Release Notes
-      id: release_notes
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # 获取上一个 tag
+        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        if [ -z "$PREV_TAG" ]; then
+          COMMITS=$(git log --pretty=format:"- %s" -20)
+        else
+          COMMITS=$(git log --pretty=format:"- %s" "${PREV_TAG}..HEAD")
+        fi
+        # 写入文件避免转义问题
+        echo "$COMMITS" > changelog_commits.txt
+
+    - name: Generate release notes
       run: |
         VERSION="${{ steps.version.outputs.VERSION }}"
-        cat > release_notes.md << EOF
-        ## 报销助手 v${VERSION}
+        COMMITS=$(cat changelog_commits.txt)
+        cat > release_notes.md << 'NOTES_EOF'
+## 报销助手 v${VERSION_PLACEHOLDER}
 
-        ### 下载安装
-        - **macOS**: 下载 \`ExpenseHelper-${VERSION}-macos.dmg\`，双击安装
-        - **Windows**: 下载 \`ExpenseHelper-${VERSION}-windows.exe\`，双击安装
+智能发票识别与报销整理工具，支持 macOS 和 Windows。
 
-        ### 本版本更新
-        - 详细更新日志请查看 [CHANGELOG.md](https://github.com/frankfika/ExpenseReimbursement/blob/main/CHANGELOG.md)
+### 下载安装
 
-        ### 使用说明
-        首次运行需要配置 API Key，请访问 [硅基流动](https://cloud.siliconflow.cn/i/Wd45d1wI) 获取。
-        EOF
-        cat release_notes.md
+| 平台 | 文件 | 说明 |
+|------|------|------|
+| macOS | `ExpenseHelper-${VERSION_PLACEHOLDER}-macos.dmg` | 双击打开，拖入 Applications |
+| Windows | `ExpenseHelper-${VERSION_PLACEHOLDER}-windows.exe` | 双击运行 |
 
-    - name: Create Release (macOS)
+### 更新内容
+
+NOTES_EOF
+        # 替换版本占位符
+        sed -i '' "s/\${VERSION_PLACEHOLDER}/${VERSION}/g" release_notes.md
+        # 追加 commits
+        cat changelog_commits.txt >> release_notes.md
+        cat >> release_notes.md << 'NOTES_EOF'
+
+### 首次使用
+
+1. 打开应用，点击右上角「设置」
+2. 前往 [硅基流动 SiliconFlow](https://cloud.siliconflow.cn/i/Wd45d1wI) 注册并获取 API Key
+3. 粘贴 API Key 并保存
+4. 上传发票，自动识别分类，下载 ZIP 结果包
+
+---
+NOTES_EOF
+        echo "" >> release_notes.md
+        echo "**Full Changelog**: https://github.com/frankfika/ExpenseReimbursement/compare/v$(cat VERSION)...v${VERSION}" >> release_notes.md
+
+    - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
-        name: 报销助手 v${{ steps.version.outputs.VERSION }}
+        name: "报销助手 v${{ steps.version.outputs.VERSION }}"
         body_path: release_notes.md
         files: dist/ExpenseHelper-*.dmg
         draft: false
@@ -106,8 +134,9 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # 单独的 Windows 构建任务
+  # Windows 构建（等 macOS 创建 Release 后再上传）
   build-windows:
+    needs: build-macos
     runs-on: windows-latest
 
     steps:
@@ -131,7 +160,6 @@ jobs:
 
     - name: Build Windows EXE
       run: |
-        $VERSION = "${{ steps.version.outputs.VERSION }}"
         pyinstaller --clean --onefile --windowed `
           --name "ExpenseHelper" `
           --add-data "web/templates;web/templates" `
@@ -144,9 +172,7 @@ jobs:
           --exclude-module test `
           --exclude-module unittest `
           --exclude-module pydoc `
-          --exclude-module argparse `
           --exclude-module http.server `
-          --exclude-module ssl `
           --strip `
           --optimize 2 `
           desktop_app.py

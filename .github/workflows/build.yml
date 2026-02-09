@@ -42,9 +42,7 @@ jobs:
           --exclude-module test \
           --exclude-module unittest \
           --exclude-module pydoc \
-          --exclude-module argparse \
           --exclude-module http.server \
-          --exclude-module ssl \
           --strip \
           --optimize 2 \
           desktop_app.py
@@ -60,14 +58,12 @@ jobs:
         cp -R "dist/${APP_NAME}.app" "$TEMP_DIR/"
         ln -s /Applications "$TEMP_DIR/Applications"
 
-        # Create compressed DMG directly
         hdiutil create -volname "ExpenseHelper" \
           -srcfolder "$TEMP_DIR" \
           -ov -format UDZO \
           -imagekey zlib-level=9 \
           "dist/${DMG_NAME}.dmg"
 
-        # Cleanup
         rm -rf "$TEMP_DIR"
 
     - name: Upload DMG
@@ -112,9 +108,7 @@ jobs:
           --exclude-module test `
           --exclude-module unittest `
           --exclude-module pydoc `
-          --exclude-module argparse `
           --exclude-module http.server `
-          --exclude-module ssl `
           --strip `
           --optimize 2 `
           desktop_app.py
