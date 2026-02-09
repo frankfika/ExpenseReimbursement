@@ -3,22 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoice Assistant - Smart Receipt Processing</title>
-    <meta name="description" content="Upload invoices, auto-recognize and categorize, download organized results with Excel report.">
+    <title data-i18n="title">报销助手 - 智能发票识别</title>
+    <meta name="description" content="上传发票，自动识别分类，下载整理结果和 Excel 报表。">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div class="page-wrapper">
         <div class="container">
             <header>
-                <h1>Invoice Assistant</h1>
-                <p class="subtitle">Upload invoices. Auto-recognize. Download organized results.</p>
+                <h1 data-i18n="appName">报销助手</h1>
+                <p class="subtitle" data-i18n="appDesc">上传发票，自动识别分类，生成报销报表</p>
+                <nav class="header-nav">
+                    <a href="/settings" class="nav-link">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                        <span data-i18n="settings">设置</span>
+                    </a>
+                    <button id="lang-toggle" class="lang-toggle" title="Switch Language">
+                        <span id="lang-label">EN</span>
+                    </button>
+                </nav>
             </header>
 
             {% if not configured %}
-            <div class="info-banner" style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; color: #1e40af;">
-                <strong>Local Mode:</strong> Using local OCR analysis.
-                <a href="/settings" style="color: #1e40af; text-decoration: underline; margin-left: 0.5rem;">Configure API for better accuracy</a>
+            <div class="info-banner">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span data-i18n="localMode">当前使用本地 OCR 模式，<a href="/settings">配置 API Key</a> 可获得更高识别准确率</span>
             </div>
             {% endif %}
 
@@ -33,12 +49,12 @@
                                 <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"></path>
                                 <path d="M12 4v12m0-12L8 8m4-4l4 4"></path>
                             </svg>
-                            <p class="drop-text">Drop files or folders here</p>
-                            <p class="drop-subtext">or click to browse</p>
-                            <p class="drop-hint">Supports JPG, PNG, PDF</p>
+                            <p class="drop-text" data-i18n="dropText">拖放文件或文件夹到此处</p>
+                            <p class="drop-subtext" data-i18n="dropSubtext">或点击下方按钮选择</p>
+                            <p class="drop-hint" data-i18n="dropHint">支持 JPG、PNG、PDF 格式</p>
                             <div class="upload-buttons">
-                                <button type="button" id="select-files-btn" class="btn btn-outline">Select Files</button>
-                                <button type="button" id="select-folder-btn" class="btn btn-outline">Select Folder</button>
+                                <button type="button" id="select-files-btn" class="btn btn-outline" data-i18n="selectFiles">选择文件</button>
+                                <button type="button" id="select-folder-btn" class="btn btn-outline" data-i18n="selectFolder">选择文件夹</button>
                             </div>
                         </div>
                         <input type="file" id="file-input" multiple accept=".jpg,.jpeg,.png,.bmp,.tiff,.webp,.pdf">
@@ -47,11 +63,11 @@
 
                     <!-- Selected Files -->
                     <div id="file-list" class="file-list hidden">
-                        <h3>Selected Files (<span id="file-count">0</span>)</h3>
+                        <h3><span data-i18n="selectedFiles">已选文件</span>（<span id="file-count">0</span><span data-i18n="filesUnit"> 个</span>）</h3>
                         <ul id="files-ul"></ul>
                         <div class="button-group">
-                            <button id="clear-btn" class="btn btn-secondary">Clear</button>
-                            <button id="upload-btn" class="btn btn-primary">Process</button>
+                            <button id="clear-btn" class="btn btn-secondary" data-i18n="clear">清空</button>
+                            <button id="upload-btn" class="btn btn-primary" data-i18n="startProcess">开始处理</button>
                         </div>
                     </div>
                 </div>
@@ -59,12 +75,13 @@
                 <!-- Progress Section -->
                 <div id="progress-section" class="card-section hidden">
                     <div class="progress-card">
-                        <h2>Processing...</h2>
+                        <div class="progress-spinner"></div>
+                        <h2 data-i18n="processing">正在处理中</h2>
                         <div class="progress-container">
                             <div class="progress-bar">
                                 <div id="progress-fill" class="progress-fill"></div>
                             </div>
-                            <p id="progress-text" class="progress-text">Preparing...</p>
+                            <p id="progress-text" class="progress-text" data-i18n="preparing">准备中...</p>
                         </div>
                         <p id="current-file" class="current-file"></p>
                     </div>
@@ -73,22 +90,27 @@
                 <!-- Result Section -->
                 <div id="result-section" class="card-section hidden">
                     <div class="result-card">
-                        <h2>Complete</h2>
+                        <div class="result-check">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </div>
+                        <h2 data-i18n="completed">处理完成</h2>
                         <div class="summary">
-                            <h3>Summary</h3>
+                            <h3 data-i18n="summary">报销汇总</h3>
                             <table id="summary-table">
                                 <thead>
                                     <tr>
-                                        <th>Category</th>
-                                        <th>Count</th>
-                                        <th>Amount</th>
+                                        <th data-i18n="category">类别</th>
+                                        <th data-i18n="count">数量</th>
+                                        <th data-i18n="amount">金额</th>
                                     </tr>
                                 </thead>
                                 <tbody id="summary-body">
                                 </tbody>
                                 <tfoot>
                                     <tr class="total-row">
-                                        <td>Total</td>
+                                        <td data-i18n="total">合计</td>
                                         <td id="total-count">-</td>
                                         <td id="total-amount">-</td>
                                     </tr>
@@ -96,19 +118,19 @@
                             </table>
                         </div>
                         <div class="button-group">
-                            <button id="download-btn" class="btn btn-primary btn-large">Download Results (ZIP)</button>
-                            <button id="restart-btn" class="btn btn-secondary">Process New</button>
+                            <button id="download-btn" class="btn btn-primary btn-large" data-i18n="downloadResult">下载报销结果（ZIP）</button>
+                            <button id="restart-btn" class="btn btn-secondary" data-i18n="continueProcess">继续处理</button>
                         </div>
-                        <p class="privacy-note">Files auto-delete after 1 minute for your privacy</p>
+                        <p class="privacy-note" data-i18n="privacyNote">文件将在下载后自动清理，保护您的隐私</p>
                     </div>
                 </div>
 
                 <!-- Error Section -->
                 <div id="error-section" class="card-section hidden">
                     <div class="error-card">
-                        <h2>Error</h2>
+                        <h2 data-i18n="errorTitle">处理出错</h2>
                         <p id="error-message" class="error-message"></p>
-                        <button id="retry-btn" class="btn btn-primary">Try Again</button>
+                        <button id="retry-btn" class="btn btn-primary" data-i18n="retry">重新尝试</button>
                     </div>
                 </div>
 
@@ -117,29 +139,167 @@
         </div>
 
         <footer>
-            <p>AI-Powered Invoice Recognition & Organization</p>
+            <p data-i18n="footerText">AI 驱动的智能发票识别与报销整理工具</p>
             <div class="footer-links">
-                <a href="/privacy">Privacy Policy</a>
+                <a href="/settings" data-i18n="settings">设置</a>
+                <a href="/privacy" data-i18n="privacy">隐私政策</a>
             </div>
         </footer>
     </div>
 
     <script>
-        // State
+        // ========== i18n ==========
+        const i18n = {
+            zh: {
+                title: '报销助手 - 智能发票识别',
+                appName: '报销助手',
+                appDesc: '上传发票，自动识别分类，生成报销报表',
+                settings: '设置',
+                localMode: '当前使用本地 OCR 模式，<a href="/settings">配置 API Key</a> 可获得更高识别准确率',
+                dropText: '拖放文件或文件夹到此处',
+                dropSubtext: '或点击下方按钮选择',
+                dropHint: '支持 JPG、PNG、PDF 格式',
+                selectFiles: '选择文件',
+                selectFolder: '选择文件夹',
+                selectedFiles: '已选文件',
+                filesUnit: ' 个',
+                clear: '清空',
+                startProcess: '开始处理',
+                processing: '正在处理中',
+                preparing: '准备中...',
+                uploading: '上传中...',
+                completed: '处理完成',
+                summary: '报销汇总',
+                category: '类别',
+                count: '数量',
+                amount: '金额',
+                total: '合计',
+                downloadResult: '下载报销结果（ZIP）',
+                downloading: '下载中...',
+                downloadDone: '下载完成',
+                continueProcess: '继续处理',
+                privacyNote: '文件将在下载后自动清理，保护您的隐私',
+                errorTitle: '处理出错',
+                retry: '重新尝试',
+                footerText: 'AI 驱动的智能发票识别与报销整理工具',
+                privacy: '隐私政策',
+                uploadFailed: '上传失败',
+                networkError: '网络错误：',
+                statusFailed: '状态查询失败',
+                processFailed: '处理失败',
+                downloadFailed: '下载失败：',
+                unknownError: '未知错误',
+                removeFile: '移除',
+                statusQueued: '排队等待中...',
+                statusProcessing: '正在识别（{current}/{total}）',
+                statusOrganizing: '正在整理分类...',
+                statusReport: '正在生成报表...',
+                statusPacking: '正在打包下载...',
+                unitSheet: ' 张',
+                categoryNames: {
+                    '打车票': '打车票',
+                    '火车飞机票': '火车飞机票',
+                    '住宿费': '住宿费',
+                    '餐费': '餐费',
+                    '其他': '其他'
+                }
+            },
+            en: {
+                title: 'Expense Helper - Smart Invoice Processing',
+                appName: 'Expense Helper',
+                appDesc: 'Upload invoices, auto-recognize & categorize, generate reports',
+                settings: 'Settings',
+                localMode: 'Using local OCR mode. <a href="/settings">Configure API Key</a> for better accuracy',
+                dropText: 'Drop files or folders here',
+                dropSubtext: 'or click below to browse',
+                dropHint: 'Supports JPG, PNG, PDF',
+                selectFiles: 'Select Files',
+                selectFolder: 'Select Folder',
+                selectedFiles: 'Selected Files',
+                filesUnit: '',
+                clear: 'Clear',
+                startProcess: 'Start Processing',
+                processing: 'Processing...',
+                preparing: 'Preparing...',
+                uploading: 'Uploading...',
+                completed: 'Complete',
+                summary: 'Expense Summary',
+                category: 'Category',
+                count: 'Count',
+                amount: 'Amount',
+                total: 'Total',
+                downloadResult: 'Download Results (ZIP)',
+                downloading: 'Downloading...',
+                downloadDone: 'Download Complete',
+                continueProcess: 'Process More',
+                privacyNote: 'Files auto-delete after download for your privacy',
+                errorTitle: 'Error',
+                retry: 'Try Again',
+                footerText: 'AI-Powered Invoice Recognition & Organization',
+                privacy: 'Privacy Policy',
+                uploadFailed: 'Upload failed',
+                networkError: 'Network error: ',
+                statusFailed: 'Status check failed',
+                processFailed: 'Processing failed',
+                downloadFailed: 'Download failed: ',
+                unknownError: 'Unknown error',
+                removeFile: 'Remove',
+                statusQueued: 'Queued...',
+                statusProcessing: 'Recognizing ({current}/{total})',
+                statusOrganizing: 'Organizing files...',
+                statusReport: 'Generating report...',
+                statusPacking: 'Packing download...',
+                unitSheet: '',
+                categoryNames: {
+                    '打车票': 'Transportation',
+                    '火车飞机票': 'Travel',
+                    '住宿费': 'Accommodation',
+                    '餐费': 'Meals',
+                    '其他': 'Other'
+                }
+            }
+        };
+
+        let currentLang = localStorage.getItem('lang') || 'zh';
+
+        function t(key) {
+            return i18n[currentLang][key] || key;
+        }
+
+        function applyLanguage() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.dataset.i18n;
+                if (i18n[currentLang][key] !== undefined) {
+                    if (key === 'localMode') {
+                        el.innerHTML = i18n[currentLang][key];
+                    } else {
+                        el.textContent = i18n[currentLang][key];
+                    }
+                }
+            });
+            document.getElementById('lang-label').textContent = currentLang === 'zh' ? 'EN' : '中';
+            document.documentElement.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
+        }
+
+        document.getElementById('lang-toggle').addEventListener('click', () => {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            localStorage.setItem('lang', currentLang);
+            applyLanguage();
+            // Re-render file list if visible
+            if (selectedFiles.length > 0) updateFileList();
+            // Re-render result if visible
+            if (!resultSection.classList.contains('hidden') && lastResultData) {
+                showResult(lastResultData);
+            }
+        });
+
+        // ========== State ==========
         let selectedFiles = [];
         let currentTaskId = null;
         let pollInterval = null;
+        let lastResultData = null;
 
-        // Category name mapping
-        const categoryNames = {
-            '打车票': 'Transportation',
-            '火车飞机票': 'Travel',
-            '住宿费': 'Accommodation',
-            '餐费': 'Meals',
-            '其他': 'Other'
-        };
-
-        // DOM Elements
+        // ========== DOM Elements ==========
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
         const folderInput = document.getElementById('folder-input');
@@ -168,7 +328,7 @@
         const retryBtn = document.getElementById('retry-btn');
         const errorMessage = document.getElementById('error-message');
 
-        // Drag & Drop
+        // ========== Drag & Drop ==========
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             dropZone.classList.add('dragover');
@@ -181,7 +341,6 @@
         dropZone.addEventListener('drop', async (e) => {
             e.preventDefault();
             dropZone.classList.remove('dragover');
-
             const items = e.dataTransfer.items;
             if (items && items.length > 0) {
                 const files = await getAllFiles(items);
@@ -191,99 +350,66 @@
             }
         });
 
-        // Recursive file traversal
+        dropZone.addEventListener('click', (e) => {
+            if (e.target.closest('.upload-buttons')) return;
+            if (isDesktopApp()) return;
+            fileInput.click();
+        });
+
         async function getAllFiles(items) {
             const files = [];
-
             async function traverseEntry(entry) {
                 if (entry.isFile) {
                     return new Promise((resolve) => {
-                        entry.file((file) => {
-                            files.push(file);
-                            resolve();
-                        });
+                        entry.file((file) => { files.push(file); resolve(); });
                     });
                 } else if (entry.isDirectory) {
                     const reader = entry.createReader();
                     return new Promise((resolve) => {
                         reader.readEntries(async (entries) => {
-                            for (const e of entries) {
-                                await traverseEntry(e);
-                            }
+                            for (const e of entries) await traverseEntry(e);
                             resolve();
                         });
                     });
                 }
             }
-
             for (const item of items) {
                 const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
-                if (entry) {
-                    await traverseEntry(entry);
-                } else if (item.kind === 'file') {
-                    files.push(item.getAsFile());
-                }
+                if (entry) await traverseEntry(entry);
+                else if (item.kind === 'file') files.push(item.getAsFile());
             }
-
             return files;
         }
 
-        // Check if running in pywebview (desktop app)
         function isDesktopApp() {
             return typeof window.pywebview !== 'undefined';
         }
 
-        // Button events
+        // ========== Button Events ==========
         selectFilesBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
             if (isDesktopApp()) {
-                // 桌面应用：使用原生对话框
                 try {
                     const files = await window.pywebview.api.select_files();
-                    console.log('select_files 返回:', files);
                     handleNativeFiles(files);
-                } catch (err) {
-                    console.error('Select files error:', err);
-                    // 降级到 HTML input
-                    fileInput.click();
-                }
-            } else {
-                // 浏览器：使用 HTML input
-                fileInput.click();
-            }
+                } catch (err) { fileInput.click(); }
+            } else { fileInput.click(); }
         });
 
         selectFolderBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
             if (isDesktopApp()) {
-                // 桌面应用：使用原生文件夹对话框
                 try {
                     const files = await window.pywebview.api.select_folder();
-                    console.log('select_folder 返回:', files);
                     handleNativeFiles(files);
-                } catch (err) {
-                    console.error('Select folder error:', err);
-                    // 降级到 HTML input
-                    folderInput.click();
-                }
-            } else {
-                // 浏览器：使用 HTML input
-                folderInput.click();
-            }
+                } catch (err) { folderInput.click(); }
+            } else { folderInput.click(); }
         });
 
-        // Handle files from native dialog (returns file info objects with path)
         function handleNativeFiles(files) {
             if (!files || files.length === 0) return;
-
             for (const fileInfo of files) {
-                // 创建一个类似 File 对象的结构
-                const fileObj = {
-                    name: fileInfo.name,
-                    size: fileInfo.size,
-                    path: fileInfo.path,  // 原生路径
-                    isNative: true
-                };
+                const fileObj = { name: fileInfo.name, size: fileInfo.size, path: fileInfo.path, isNative: true };
                 if (!selectedFiles.find(f => f.name === fileObj.name && f.size === fileObj.size)) {
                     selectedFiles.push(fileObj);
                 }
@@ -291,185 +417,143 @@
             updateFileList();
         }
 
-        fileInput.addEventListener('change', (e) => {
-            handleFiles(e.target.files);
-        });
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        folderInput.addEventListener('change', (e) => handleFiles(e.target.files));
 
-        folderInput.addEventListener('change', (e) => {
-            handleFiles(e.target.files);
-        });
-
-        // Handle selected files
         function handleFiles(files) {
             const allowedTypes = ['image/jpeg', 'image/png', 'image/bmp', 'image/tiff', 'image/webp', 'application/pdf'];
-            const allowedExtensions = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp', '.pdf'];
-
+            const allowedExts = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp', '.pdf'];
             for (const file of files) {
                 const ext = '.' + file.name.split('.').pop().toLowerCase();
-                if (allowedTypes.includes(file.type) || allowedExtensions.includes(ext)) {
+                if (allowedTypes.includes(file.type) || allowedExts.includes(ext)) {
                     if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
                         selectedFiles.push(file);
                     }
                 }
             }
-
             updateFileList();
         }
 
-        // Update file list display
-        function updateFileList() {
-            if (selectedFiles.length === 0) {
-                fileList.classList.add('hidden');
-                return;
-            }
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
 
+        function updateFileList() {
+            if (selectedFiles.length === 0) { fileList.classList.add('hidden'); return; }
             fileList.classList.remove('hidden');
             fileCount.textContent = selectedFiles.length;
             filesUl.innerHTML = '';
-
             selectedFiles.forEach((file, index) => {
                 const li = document.createElement('li');
-                const size = (file.size / 1024).toFixed(1);
+                const ext = file.name.split('.').pop().toLowerCase();
+                const icon = ext === 'pdf' ? '📄' : '🖼';
                 li.innerHTML = `
+                    <span class="file-icon">${icon}</span>
                     <span class="file-name">${file.name}</span>
-                    <span class="file-size">${size} KB</span>
-                    <button class="remove-btn" data-index="${index}">&times;</button>
+                    <span class="file-size">${formatSize(file.size)}</span>
+                    <button class="remove-btn" data-index="${index}" title="${t('removeFile')}">&times;</button>
                 `;
                 filesUl.appendChild(li);
             });
-
             filesUl.querySelectorAll('.remove-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    const index = parseInt(e.target.dataset.index);
-                    selectedFiles.splice(index, 1);
+                    selectedFiles.splice(parseInt(e.target.dataset.index), 1);
                     updateFileList();
                 });
             });
         }
 
-        // Clear files
         clearBtn.addEventListener('click', () => {
             selectedFiles = [];
             fileInput.value = '';
             updateFileList();
         });
 
-        // Upload
+        // ========== Upload ==========
         uploadBtn.addEventListener('click', async () => {
             if (selectedFiles.length === 0) return;
-
             try {
                 showSection('progress');
                 progressFill.style.width = '0%';
-                progressText.textContent = 'Uploading...';
+                progressText.textContent = t('uploading');
 
                 let response;
-
-                // 检查是否有原生文件（带有 path 属性）
                 const hasNativeFiles = selectedFiles.some(f => f.isNative && f.path);
 
                 if (hasNativeFiles) {
-                    // 使用 JSON 发送文件路径（桌面应用）
                     const paths = selectedFiles.filter(f => f.path).map(f => f.path);
                     response = await fetch('/upload', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ paths: paths })
                     });
                 } else {
-                    // 使用 FormData 上传文件（浏览器）
                     const formData = new FormData();
-                    selectedFiles.forEach(file => {
-                        formData.append('files[]', file);
-                    });
-                    response = await fetch('/upload', {
-                        method: 'POST',
-                        body: formData
-                    });
+                    selectedFiles.forEach(file => formData.append('files[]', file));
+                    response = await fetch('/upload', { method: 'POST', body: formData });
                 }
 
                 const data = await response.json();
-
                 if (response.ok) {
                     currentTaskId = data.task_id;
                     startPolling();
                 } else {
-                    showError(data.error || 'Upload failed');
+                    showError(data.error || t('uploadFailed'));
                 }
             } catch (error) {
-                showError('Network error: ' + error.message);
+                showError(t('networkError') + error.message);
             }
         });
 
-        // Poll status
+        // ========== Polling ==========
         function startPolling() {
             pollInterval = setInterval(async () => {
                 try {
                     const response = await fetch(`/status/${currentTaskId}`);
                     const data = await response.json();
-
-                    if (!response.ok) {
-                        clearInterval(pollInterval);
-                        showError(data.error || 'Status check failed');
-                        return;
-                    }
-
+                    if (!response.ok) { clearInterval(pollInterval); showError(data.error || t('statusFailed')); return; }
                     updateProgress(data);
-
-                    if (data.status === 'completed') {
-                        clearInterval(pollInterval);
-                        showResult(data);
-                    } else if (data.status === 'error') {
-                        clearInterval(pollInterval);
-                        showError(data.error || 'Processing failed');
-                    }
-                } catch (error) {
-                    clearInterval(pollInterval);
-                    showError('Network error: ' + error.message);
-                }
+                    if (data.status === 'completed') { clearInterval(pollInterval); showResult(data); }
+                    else if (data.status === 'error') { clearInterval(pollInterval); showError(data.error || t('processFailed')); }
+                } catch (error) { clearInterval(pollInterval); showError(t('networkError') + error.message); }
             }, 1000);
         }
 
-        // Update progress
         function updateProgress(data) {
-            const statusText = {
-                'queued': 'Queued...',
-                'processing': `Recognizing (${data.current}/${data.total})`,
-                'organizing': 'Organizing files...',
-                'generating_report': 'Generating report...',
-                'packing': 'Packing download...'
+            const statusMap = {
+                'queued': t('statusQueued'),
+                'processing': t('statusProcessing').replace('{current}', data.current).replace('{total}', data.total),
+                'organizing': t('statusOrganizing'),
+                'generating_report': t('statusReport'),
+                'packing': t('statusPacking')
             };
-
-            progressText.textContent = statusText[data.status] || data.status;
-
+            progressText.textContent = statusMap[data.status] || data.status;
             if (data.total > 0) {
-                const percent = Math.round((data.current / data.total) * 100);
-                progressFill.style.width = percent + '%';
+                progressFill.style.width = Math.round((data.current / data.total) * 100) + '%';
             }
-
-            if (data.current_file) {
-                currentFile.textContent = data.current_file;
-            }
+            if (data.current_file) currentFile.textContent = data.current_file;
         }
 
-        // Show result
+        // ========== Result ==========
         function showResult(data) {
+            lastResultData = data;
             showSection('result');
-
             summaryBody.innerHTML = '';
-            let totalInvoices = 0;
-            let totalSum = 0;
-
+            let totalInvoices = 0, totalSum = 0;
             const categories = ['打车票', '火车飞机票', '住宿费', '餐费', '其他'];
+            const catNames = t('categoryNames');
+
             categories.forEach(cat => {
                 const info = data.summary[cat];
                 if (info && info.count > 0) {
                     const tr = document.createElement('tr');
+                    const displayName = (typeof catNames === 'object' && catNames[cat]) || cat;
+                    const unit = t('unitSheet');
                     tr.innerHTML = `
-                        <td>${categoryNames[cat] || cat}</td>
-                        <td>${info.count}</td>
+                        <td>${displayName}</td>
+                        <td>${info.count}${unit}</td>
                         <td>¥${info.amount.toFixed(2)}</td>
                     `;
                     summaryBody.appendChild(tr);
@@ -478,81 +562,73 @@
                 }
             });
 
-            totalCount.textContent = totalInvoices;
+            totalCount.textContent = totalInvoices + t('unitSheet');
             totalAmount.textContent = '¥' + totalSum.toFixed(2);
         }
 
-        // Download
+        // ========== Download ==========
         downloadBtn.addEventListener('click', async () => {
             if (!currentTaskId) return;
-
             if (isDesktopApp()) {
-                // 桌面应用：使用 pywebview API 下载
                 try {
                     downloadBtn.disabled = true;
-                    downloadBtn.textContent = 'Downloading...';
-
+                    downloadBtn.textContent = t('downloading');
                     const result = await window.pywebview.api.download_file(
                         `/download/${currentTaskId}`,
                         `报销结果_${new Date().toISOString().slice(0,10).replace(/-/g,'')}.zip`
                     );
-
                     if (result.success) {
-                        downloadBtn.textContent = 'Download Complete!';
-                        setTimeout(() => {
-                            downloadBtn.disabled = false;
-                            downloadBtn.textContent = 'Download Results (ZIP)';
-                        }, 2000);
+                        downloadBtn.textContent = t('downloadDone');
+                        setTimeout(() => { downloadBtn.disabled = false; downloadBtn.textContent = t('downloadResult'); }, 2000);
                     } else if (!result.cancelled) {
-                        alert('Download failed: ' + (result.error || 'Unknown error'));
+                        alert(t('downloadFailed') + (result.error || t('unknownError')));
                         downloadBtn.disabled = false;
-                        downloadBtn.textContent = 'Download Results (ZIP)';
+                        downloadBtn.textContent = t('downloadResult');
                     } else {
                         downloadBtn.disabled = false;
-                        downloadBtn.textContent = 'Download Results (ZIP)';
+                        downloadBtn.textContent = t('downloadResult');
                     }
                 } catch (err) {
-                    console.error('Download error:', err);
-                    alert('Download error: ' + err.message);
+                    alert(t('downloadFailed') + err.message);
                     downloadBtn.disabled = false;
-                    downloadBtn.textContent = 'Download Results (ZIP)';
+                    downloadBtn.textContent = t('downloadResult');
                 }
             } else {
-                // 浏览器：使用常规下载
                 window.location.href = `/download/${currentTaskId}`;
             }
         });
 
-        // Restart
+        // ========== Reset ==========
         restartBtn.addEventListener('click', reset);
         retryBtn.addEventListener('click', reset);
 
         function reset() {
             selectedFiles = [];
             currentTaskId = null;
+            lastResultData = null;
             fileInput.value = '';
             updateFileList();
             showSection('upload');
         }
 
-        // Section management
         function showSection(name) {
             uploadSection.classList.add('hidden');
             progressSection.classList.add('hidden');
             resultSection.classList.add('hidden');
             errorSection.classList.add('hidden');
-
             if (name === 'upload') uploadSection.classList.remove('hidden');
             if (name === 'progress') progressSection.classList.remove('hidden');
             if (name === 'result') resultSection.classList.remove('hidden');
             if (name === 'error') errorSection.classList.remove('hidden');
         }
 
-        // Show error
         function showError(message) {
             errorMessage.textContent = message;
             showSection('error');
         }
+
+        // Init language
+        applyLanguage();
     </script>
 </body>
 </html>

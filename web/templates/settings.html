@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Settings - Invoice Assistant</title>
+    <title>设置 - 报销助手</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
         .settings-card {
@@ -71,7 +71,7 @@
             margin-bottom: 1rem;
             display: none;
         }
-        .error-message {
+        .settings-error-message {
             background: #fee2e2;
             border: 1px solid #fca5a5;
             color: #991b1b;
@@ -112,8 +112,8 @@
     <div class="page-wrapper">
         <div class="container">
             <header>
-                <h1>Settings</h1>
-                <p class="subtitle">Configure API Key for Invoice Recognition</p>
+                <h1>设置</h1>
+                <p class="subtitle">配置 API Key 以启用智能识别</p>
             </header>
 
             <div class="main-card">
@@ -122,59 +122,59 @@
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M19 12H5M12 19l-7-7 7-7"/>
                         </svg>
-                        Back to Home
+                        返回首页
                     </a>
 
                     <div style="margin-bottom: 1.5rem;">
-                        <strong>Status:</strong>
+                        <strong>当前状态：</strong>
                         {% if configured %}
-                        <span class="status-badge configured">Configured</span>
+                        <span class="status-badge configured">已配置</span>
                         {% else %}
-                        <span class="status-badge not-configured">Not Configured</span>
+                        <span class="status-badge not-configured">未配置</span>
                         {% endif %}
                     </div>
 
                     <div class="help-section">
-                        <h3>How to get an API Key</h3>
+                        <h3>如何获取 API Key</h3>
                         <ol>
-                            <li>Visit <a href="https://cloud.siliconflow.cn/i/Wd45d1wI" target="_blank">SiliconFlow</a> and register/login</li>
-                            <li>Click "API Keys" in the left menu</li>
-                            <li>Click "New API Key" and copy the generated key</li>
+                            <li>访问 <a href="https://cloud.siliconflow.cn/i/Wd45d1wI" target="_blank">硅基流动 SiliconFlow</a> 注册/登录</li>
+                            <li>点击左侧菜单「API 密钥」</li>
+                            <li>点击「新建 API 密钥」，复制生成的密钥</li>
                         </ol>
                     </div>
 
                     <div id="success-msg" class="success-message"></div>
-                    <div id="error-msg" class="error-message"></div>
+                    <div id="error-msg" class="settings-error-message"></div>
 
                     <form id="settings-form">
                         <div class="form-group">
                             <label for="api_key">API Key *</label>
                             <input type="password" id="api_key" name="api_key" placeholder="sk-xxxxxxxxxxxxxxxx" required>
-                            <p class="hint">{% if api_key %}Current: {{ api_key }}{% else %}No API Key configured{% endif %}</p>
+                            <p class="hint">{% if api_key %}当前：{{ api_key }}{% else %}尚未配置 API Key{% endif %}</p>
                         </div>
 
                         <div class="form-group">
-                            <label for="base_url">API Base URL</label>
+                            <label for="base_url">API 地址</label>
                             <input type="text" id="base_url" name="base_url" value="{{ base_url or 'https://api.siliconflow.cn' }}">
-                            <p class="hint">Default: https://api.siliconflow.cn</p>
+                            <p class="hint">默认：https://api.siliconflow.cn</p>
                         </div>
 
                         <div class="form-group">
-                            <label for="model">Model</label>
+                            <label for="model">模型</label>
                             <input type="text" id="model" name="model" value="{{ model or 'deepseek-ai/DeepSeek-V3' }}">
-                            <p class="hint">Default: deepseek-ai/DeepSeek-V3</p>
+                            <p class="hint">默认：deepseek-ai/DeepSeek-V3</p>
                         </div>
 
-                        <button type="submit" class="btn btn-primary btn-large" style="width: 100%;">Save Settings</button>
+                        <button type="submit" class="btn btn-primary btn-large" style="width: 100%;">保存设置</button>
                     </form>
                 </div>
             </div>
         </div>
 
         <footer>
-            <p>AI-Powered Invoice Recognition & Organization</p>
+            <p>AI 驱动的智能发票识别与报销整理工具</p>
             <div class="footer-links">
-                <a href="/privacy">Privacy Policy</a>
+                <a href="/privacy">隐私政策</a>
             </div>
         </footer>
     </div>
@@ -207,17 +207,17 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    successMsg.textContent = 'Settings saved successfully! Redirecting...';
+                    successMsg.textContent = '设置已保存，正在返回首页...';
                     successMsg.style.display = 'block';
                     setTimeout(() => {
                         window.location.href = '/';
                     }, 1500);
                 } else {
-                    errorMsg.textContent = data.error || 'Failed to save settings';
+                    errorMsg.textContent = data.error || '保存失败';
                     errorMsg.style.display = 'block';
                 }
             } catch (error) {
-                errorMsg.textContent = 'Network error: ' + error.message;
+                errorMsg.textContent = '网络错误：' + error.message;
                 errorMsg.style.display = 'block';
             }
         });

@@ -8,6 +8,7 @@
 """
 import argparse
 import os
+import re
 import sys
 from pathlib import Path
 from typing import List, Dict
@@ -39,7 +40,6 @@ def normalize_category(folder_name: str) -> str:
          "火车票:飞机票（已完成）" -> "火车飞机票"
          "饮食-差肯德基发票（完成）" -> "餐费"
     """
-    import re
     # 移除括号及其内容
     name = re.sub(r'[（(][^）)]*[）)]', '', folder_name)
     # 移除常见后缀
@@ -90,7 +90,6 @@ def scan_organized_dir(organized_dir: str, use_ai: bool = False, api_key: str = 
     ├── 餐费/
     └── ...
     """
-    import re
     from collections import defaultdict
     categorized = defaultdict(list)
     organized_path = Path(organized_dir)
@@ -149,8 +148,6 @@ def scan_organized_dir(organized_dir: str, use_ai: bool = False, api_key: str = 
 
 def parse_filename(filename: str, file_path: str, category: str, parent_folder: str = "") -> InvoiceInfo:
     """从文件名解析发票信息，如果信息不完整则尝试从父文件夹名提取"""
-    import re
-
     # 合并文件名和父文件夹名来提取信息
     combined_text = f"{parent_folder}_{filename}"
 

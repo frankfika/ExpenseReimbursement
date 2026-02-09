@@ -34,13 +34,17 @@ def get_image_mime_type(file_path: str) -> str:
 class OCRHandler:
     """OCR 处理器 - 使用本地 PaddleOCR"""
 
+    _INIT_FAILED = object()  # 初始化失败的哨兵值
+
     def __init__(self):
         self._ocr = None
+        self._initialized = False
 
     @property
     def ocr(self):
         """延迟加载 PaddleOCR（首次使用时才加载，避免启动慢）"""
-        if self._ocr is None:
+        if not self._initialized:
+            self._initialized = True
             try:
                 from paddleocr import PaddleOCR
                 # 使用中英文模型，禁用GPU（更通用）

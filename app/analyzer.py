@@ -394,7 +394,7 @@ class LocalAnalyzer:
         r'(\d{4})(\d{2})(\d{2})',  # 20240115 格式
     ]
 
-    # 发票号码模�式
+    # 发票号码模式
     INVOICE_PATTERNS = [
         r'发票号码[：:]*\s*(\d+)',
         r'No[\.:]?\s*(\d+)',
@@ -524,15 +524,19 @@ class LocalAnalyzer:
 
 # 全局实例（延迟初始化）
 _api_analyzer = None
+_api_analyzer_key = None
 _local_analyzer = None
 _vision_analyzer = None
+_vision_analyzer_key = None
 
 
 def get_analyzer(api_key: str = None, use_api: bool = True) -> InvoiceAnalyzer:
-    """获取 API 分析器实例"""
-    global _api_analyzer
-    if _api_analyzer is None:
+    """获取 API 分析器实例（API key 变更时自动重建）"""
+    global _api_analyzer, _api_analyzer_key
+    actual_key = api_key or DEEPSEEK_API_KEY
+    if _api_analyzer is None or _api_analyzer_key != actual_key:
         _api_analyzer = InvoiceAnalyzer(api_key)
+        _api_analyzer_key = actual_key
     return _api_analyzer
 
 
@@ -545,10 +549,12 @@ def get_local_analyzer() -> LocalAnalyzer:
 
 
 def get_vision_analyzer(api_key: str = None) -> VisionAnalyzer:
-    """获取视觉模型分析器实例"""
-    global _vision_analyzer
-    if _vision_analyzer is None:
+    """获取视觉模型分析器实例（API key 变更时自动重建）"""
+    global _vision_analyzer, _vision_analyzer_key
+    actual_key = api_key or DEEPSEEK_API_KEY
+    if _vision_analyzer is None or _vision_analyzer_key != actual_key:
         _vision_analyzer = VisionAnalyzer(api_key)
+        _vision_analyzer_key = actual_key
     return _vision_analyzer
 
 

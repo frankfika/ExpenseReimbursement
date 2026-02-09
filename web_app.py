@@ -18,12 +18,11 @@ from datetime import datetime
 from flask import Flask, render_template, request, jsonify, send_file, after_this_request
 
 # 导入核心模块
-from app import DEEPSEEK_API_KEY, INVOICE_CATEGORIES, is_configured, setup_wizard
+from app import INVOICE_CATEGORIES, is_configured, setup_wizard
 from app import extract_text_from_file, is_supported_file
 from app import analyze_invoice, analyze_invoice_vision, InvoiceInfo, FileOrganizer, generate_report
 
 # 确定模板和静态文件夹路径（支持打包环境）
-import sys
 if getattr(sys, 'frozen', False):
     # PyInstaller 打包环境
     base_path = sys._MEIPASS
@@ -109,9 +108,6 @@ class TaskManager:
 
 # 任务管理器实例
 task_manager = TaskManager()
-# 兼容旧代码的引用
-tasks = task_manager.tasks
-tasks_lock = task_manager.lock
 
 
 def allowed_file(filename):
@@ -123,7 +119,7 @@ def cleanup_task(task_id, delay=1800):
     """延迟清理任务数据（默认30分钟后）"""
     def do_cleanup():
         time.sleep(delay)
-        with tasks_lock:
+        with task_manager.lock:
             if task_id in task_manager:
                 task = task_manager[task_id]
                 # 删除临时目录
@@ -142,7 +138,7 @@ def cleanup_task(task_id, delay=1800):
 
 def cleanup_all_tasks():
     """服务器关闭时清理所有任务"""
-    with tasks_lock:
+    with task_manager.lock:
         for task_id, task in task_manager.items():
             if 'temp_dir' in task and os.path.exists(task['temp_dir']):
                 shutil.rmtree(task['temp_dir'], ignore_errors=True)
@@ -160,8 +156,10 @@ atexit.register(cleanup_all_tasks)
 
 def process_task(task_id):
     """后台处理上传的文件"""
-    from app.config import DEEPSEEK_BASE_URL
-    task = tasks[task_id]
+    from app.config import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL
+    task = task_manager.get(task_id)
+    if not task:
+        return
     temp_dir = task['temp_dir']
     output_dir = task['output_dir']
 
@@ -292,12 +290,12 @@ def index():
 @app.route('/settings')
 def settings():
     """设置页面"""
-    from app.config import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, DEEPSEEK_MODEL
+    import app.config as config
     return render_template('settings.html',
                          configured=is_configured(),
-                         api_key=DEEPSEEK_API_KEY[:8] + '...' if DEEPSEEK_API_KEY and len(DEEPSEEK_API_KEY) > 8 else '',
-                         base_url=DEEPSEEK_BASE_URL,
-                         model=DEEPSEEK_MODEL)
+                         api_key=config.DEEPSEEK_API_KEY[:8] + '...' if config.DEEPSEEK_API_KEY and len(config.DEEPSEEK_API_KEY) > 8 else '',
+                         base_url=config.DEEPSEEK_BASE_URL,
+                         model=config.DEEPSEEK_MODEL)
 
 
 @app.route('/save-settings', methods=['POST'])
@@ -314,10 +312,6 @@ def save_settings():
 
     try:
         save_config(api_key, base_url, model)
-        # 重新加载配置
-        global DEEPSEEK_API_KEY
-        from app.config import DEEPSEEK_API_KEY as new_key
-        DEEPSEEK_API_KEY = new_key
         return jsonify({'success': True, 'message': '配置已保存'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -460,10 +454,10 @@ def upload_from_paths(file_paths):
 @app.route('/status/<task_id>')
 def status(task_id):
     """查询任务状态"""
-    if task_id not in tasks:
+    if task_id not in task_manager:
         return jsonify({'error': '任务不存在或已过期'}), 404
 
-    task = tasks[task_id]
+    task = task_manager[task_id]
 
     response = {
         'status': task['status'],
@@ -485,10 +479,10 @@ def status(task_id):
 @app.route('/download/<task_id>')
 def download(task_id):
     """下载处理结果"""
-    if task_id not in tasks:
+    if task_id not in task_manager:
         return jsonify({'error': '任务不存在或已过期'}), 404
 
-    task = tasks[task_id]
+    task = task_manager[task_id]
 
     if task['status'] != 'completed':
         return jsonify({'error': '任务尚未完成'}), 400
@@ -503,7 +497,7 @@ def download(task_id):
         # 启动快速清理（下载后1分钟清理）
         def quick_cleanup():
             time.sleep(60)
-            with tasks_lock:
+            with task_manager.lock:
                 if task_id in task_manager:
                     t = task_manager[task_id]
                     if 'output_dir' in t and os.path.exists(t['output_dir']):
@@ -544,7 +538,7 @@ def main():
     webbrowser.open('http://localhost:5000')
 
     # 启动服务器
-    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+    app.run(host='127.0.0.1', port=5000, debug=False, threaded=True)
 
 
 if __name__ == '__main__':

@@ -320,7 +320,6 @@ class FileOrganizer:
             r'(.+?)出发',  # A出发
         ]
 
-        import re
         for pattern in patterns:
             match = re.search(pattern, description)
             if match:
