@@ -85,6 +85,7 @@ AI 自动将发票归类到五大类别：
 | 💻 桌面应用 | macOS (DMG)、Windows (EXE) | 日常使用，功能最全 |
 | 🌐 网页版 | 浏览器访问，无需安装 | 临时使用，跨设备 |
 | ⌨️ 命令行 | 批处理，自动化 | 技术用户，批量处理 |
+| 🤖 Claude Code Skill | 对话式交互，零配置 | Claude Code 用户，AI 原生体验 |
 
 ![多平台](./docs/assets/platforms.png)
 
@@ -226,11 +227,45 @@ graph LR
 ├── tests/                 # 测试套件
 ├── releases/              # 构建产物
 ├── docs/assets/           # 文档图片
+├── claude-skill/          # Claude Code Skill
+│   ├── SKILL.md          # Skill 定义
+│   └── scripts/          # 报表生成脚本
 ├── desktop_app.py         # 桌面应用入口
 ├── web_app.py            # Web 应用入口
 ├── main.py               # 统一入口
 └── requirements.txt      # Python 依赖
 ```
+
+## Claude Code Skill
+
+除了桌面应用、网页版和命令行，报销助手还提供 **Claude Code Skill**，让你在终端里直接用对话完成报销整理。
+
+### 安装
+
+将 `claude-skill/` 目录复制到你的 Claude Code skills 目录：
+
+```bash
+cp -r claude-skill ~/.claude/skills/expense-reimbursement
+```
+
+### 使用
+
+在 Claude Code 中直接说：
+
+```
+帮我整理 ~/Desktop/发票 这个文件夹的发票
+```
+
+或者任何包含「报销」「发票」「整理发票」的指令都会自动触发。
+
+### 优势
+
+| 对比项 | 原版（API 模式） | Claude Code Skill |
+|--------|----------------|-------------------|
+| OCR 引擎 | PaddleOCR（需安装约100MB） | Claude 原生视觉能力 |
+| AI 分析 | 硅基流动 API（需 Key） | Claude 自身（零配置） |
+| Python 依赖 | 10+ 个包 | 仅 openpyxl |
+| 交互方式 | GUI / CLI | 自然语言对话 |
 
 ## 版本演进
 
