@@ -132,9 +132,12 @@ class OCRHandler:
                     if ocr_text:
                         texts.append(ocr_text)
                 finally:
-                    # 确保清理临时文件
-                    if temp_file and os.path.exists(temp_path):
-                        os.remove(temp_path)
+                    # 确保清理临时文件（忽略不存在的错误）
+                    if temp_path:
+                        try:
+                            os.remove(temp_path)
+                        except OSError:
+                            pass
 
         doc.close()
         return "\n".join(texts)

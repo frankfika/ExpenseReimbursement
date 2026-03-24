@@ -344,20 +344,27 @@ class FileOrganizer:
     def _move_file(self, src: str, dst: Path):
         """移动或复制文件"""
         src_path = Path(src)
-        if src_path.exists():
-            # 如果目标已存在，添加序号
-            if dst.exists():
-                stem = dst.stem
-                suffix = dst.suffix
-                counter = 1
-                while dst.exists():
-                    dst = dst.parent / f"{stem}_{counter}{suffix}"
-                    counter += 1
-
+        # 使用 try/except 而不是预检查（避免 TOCTOU 竞态）
+        try:
+            # 尝试直接操作
             if self.copy_mode:
                 shutil.copy2(str(src_path), str(dst))
                 action = "复制"
             else:
                 shutil.move(str(src_path), str(dst))
                 action = "移动"
-            print(f"  {action}: {src_path.name} -> {dst.relative_to(self.output_dir)}")
+        except FileExistsError:
+            # 目标已存在，添加序号
+            stem = dst.stem
+            suffix = dst.suffix
+            counter = 1
+            while dst.exists():
+                dst = dst.parent / f"{stem}_{counter}{suffix}"
+                counter += 1
+            if self.copy_mode:
+                shutil.copy2(str(src_path), str(dst))
+                action = "复制"
+            else:
+                shutil.move(str(src_path), str(dst))
+                action = "移动"
+        print(f"  {action}: {src_path.name} -> {dst.relative_to(self.output_dir)}")

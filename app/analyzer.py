@@ -8,6 +8,10 @@ import requests
 from .config import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, DEEPSEEK_MODEL, VISION_MODEL, CATEGORY_KEYWORDS
 from .ocr import file_to_image_content
 
+# 模块级正则表达式常量（避免重复编译）
+_CODE_BLOCK_JSON_RE = re.compile(r'```(?:json)?\s*(\{[\s\S]*?\})\s*```')
+_JSON_BRACE_RE = re.compile(r'\{[\s\S]*\}')
+
 
 @dataclass
 class InvoiceInfo:
@@ -65,7 +69,7 @@ def _extract_json_from_response(content: str) -> dict:
             pass
 
     # 尝试提取 markdown 代码块中的 JSON
-    code_block_match = re.search(r'```(?:json)?\s*(\{[\s\S]*?\})\s*```', content)
+    code_block_match = _CODE_BLOCK_JSON_RE.search(content)
     if code_block_match:
         try:
             return json.loads(code_block_match.group(1))
@@ -74,7 +78,7 @@ def _extract_json_from_response(content: str) -> dict:
 
     # 尝试提取任何 JSON 对象（贪婪匹配最外层的 {}）
     # 使用非贪婪匹配可能会截断嵌套对象
-    json_match = re.search(r'\{[\s\S]*\}', content)
+    json_match = _JSON_BRACE_RE.search(content)
     if json_match:
         json_str = json_match.group()
         # 尝试找到正确闭合的 JSON
