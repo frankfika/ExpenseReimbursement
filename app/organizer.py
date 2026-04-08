@@ -273,7 +273,7 @@ class FileOrganizer:
 
     def _calculate_match_score(self, voucher: InvoiceInfo, invoice: InvoiceInfo) -> int:
         """
-        计算凭证和发票的匹配分数
+        计算凭证和发票的匹配分数（优化版）
 
         配对逻辑：以凭证/行程单的实际消费日期为准（因为发票可能是后补开的）
         注意：同类发票（如多个打车票）不应互相配对，应该各自独立
@@ -285,27 +285,25 @@ class FileOrganizer:
         if voucher.type != invoice.type:
             return 0  # 酒店凭证不能和机票发票配对
 
-        # 1. 同类型发票检查 - 如果两个都是发票且类型相同，不应该配对（各自是独立的消费）
-        # 配对应该是"凭证+发票"或"水单+发票"
+        # 1. 同类型发票检查 - 如果两个都是发票且类型相同，不应该配对
         if voucher.is_invoice and invoice.is_invoice and voucher.type == invoice.type:
-            # 两个同类发票不应该配对，除非有强关联信号（如订单号完全匹配）
             if not (voucher.order_number and invoice.order_number and voucher.order_number == invoice.order_number):
-                return 0  # 直接返回0，不配对
+                return 0
 
-        # 1. 订单号匹配（最高优先级）- 用于配对发票和水单
+        # 2. 订单号匹配（最高优先级）
         if voucher.order_number and invoice.order_number:
+            # 完全匹配
             if voucher.order_number == invoice.order_number:
-                score += 10  # 订单号完全匹配，直接配对
+                score += 15  # 订单号完全匹配，最高优先级
+            # 部分匹配（包含关系）
+            elif voucher.order_number in invoice.order_number or invoice.order_number in voucher.order_number:
+                score += 8
 
-        # 2. 平台/商家匹配（最重要）
-        if self._normalize_merchant(voucher.subtype) == self._normalize_merchant(invoice.subtype):
-            score += 3
-        elif self._normalize_merchant(voucher.merchant) == self._normalize_merchant(invoice.merchant):
-            score += 2
+        # 3. 商家相似度匹配（使用模糊匹配）
+        merchant_score = self._calculate_merchant_similarity(voucher, invoice)
+        score += merchant_score
 
-        # 3. 日期匹配 - 以凭证的实际消费日期为准
-        # 凭证的 service_date 应该和发票的 service_date 匹配
-        # 发票的开票日期(date)可能晚于实际消费日期
+        # 4. 日期匹配 - 以实际消费日期为准
         voucher_date = voucher.get_actual_date()
         invoice_service_date = invoice.service_date or invoice.date
 
@@ -315,26 +313,130 @@ class FileOrganizer:
                 i_date = datetime.strptime(invoice_service_date, "%Y-%m-%d")
                 days_diff = abs((v_date - i_date).days)
                 if days_diff == 0:
-                    score += 2  # 日期完全匹配
+                    score += 3  # 日期完全匹配
                 elif days_diff <= 1:
-                    score += 1  # 相差1天也可接受（仅对 voucher+invoice 组合）
+                    score += 2  # 相差1天
+                elif days_diff <= 3:
+                    score += 1  # 相差3天内（可能是开票延迟）
             except ValueError:
                 pass
 
-        # 4. 金额匹配
+        # 5. 金额匹配（考虑开票金额可能含税）
         if voucher.amount > 0 and invoice.amount > 0:
+            # 计算含税后的可能金额（假设税率13%）
+            voucher_with_tax = voucher.amount * 1.13
+            invoice_with_tax = invoice.amount * 1.13
+
+            # 原始金额匹配
             diff = abs(voucher.amount - invoice.amount)
             max_amount = max(voucher.amount, invoice.amount)
-            if diff <= max_amount * 0.01:  # 1% 误差范围内
-                score += 3  # 金额完全匹配很重要
-            elif diff <= max_amount * 0.05:  # 5% 误差范围内
+
+            if diff <= max_amount * 0.005:  # 0.5% 误差
+                score += 5
+            elif diff <= max_amount * 0.01:  # 1% 误差
+                score += 3
+            elif diff <= max_amount * 0.05:  # 5% 误差
+                score += 1
+            # 考虑含税后的匹配
+            elif abs(voucher_with_tax - invoice.amount) <= invoice.amount * 0.01:
+                score += 4  # 发票含了税
+            elif abs(invoice_with_tax - voucher.amount) <= voucher.amount * 0.01:
+                score += 4  # 凭证含了税
+
+        # 6. 类型匹配
+        if voucher.type == invoice.type:
+            score += 2
+
+        # 7. 行程信息匹配（针对交通类）
+        if voucher.type in ["train", "flight", "taxi"]:
+            trip_score = self._calculate_trip_similarity(voucher, invoice)
+            score += trip_score
+
+        # 8. 描述相似度匹配（用于辅助判断）
+        if voucher.description and invoice.description:
+            desc_sim = self._string_similarity(voucher.description, invoice.description)
+            if desc_sim > 0.8:
+                score += 2
+            elif desc_sim > 0.5:
                 score += 1
 
-        # 5. 类型匹配（仅对 voucher+invoice 组合）
-        if voucher.type == invoice.type:
-            score += 1
+        return score
+
+    def _calculate_merchant_similarity(self, voucher: InvoiceInfo, invoice: InvoiceInfo) -> int:
+        """计算商家相似度得分"""
+        score = 0
+
+        # 商家名称标准化比较
+        v_merchants = [
+            self._normalize_merchant(voucher.subtype),
+            self._normalize_merchant(voucher.merchant)
+        ]
+        i_merchants = [
+            self._normalize_merchant(invoice.subtype),
+            self._normalize_merchant(invoice.merchant)
+        ]
+
+        for v_m in v_merchants:
+            if not v_m:
+                continue
+            for i_m in i_merchants:
+                if not i_m:
+                    continue
+                # 完全匹配
+                if v_m == i_m:
+                    score += 4
+                    return score
+                # 包含关系
+                if v_m in i_m or i_m in v_m:
+                    score += 2
+                # 相似度检查（简单实现）
+                elif self._string_similarity(v_m, i_m) > 0.7:
+                    score += 2
+
+        return min(score, 4)  # 最高4分
+
+    def _calculate_trip_similarity(self, voucher: InvoiceInfo, invoice: InvoiceInfo) -> int:
+        """计算行程相似度（针对交通发票）"""
+        score = 0
+
+        # 从描述中提取行程信息
+        v_trip = self._extract_trip_info(voucher.description) if voucher.description else ""
+        i_trip = self._extract_trip_info(invoice.description) if invoice.description else ""
+
+        if v_trip and i_trip:
+            # 行程信息完全匹配
+            if v_trip == i_trip:
+                score += 3
+            # 起点或终点匹配
+            elif v_trip.split('-')[0] == i_trip.split('-')[0]:  # 起点相同
+                score += 2
+            elif len(v_trip.split('-')) > 1 and len(i_trip.split('-')) > 1:
+                if v_trip.split('-')[1] == i_trip.split('-')[1]:  # 终点相同
+                    score += 2
+
+        # 航班号/车次号匹配
+        if voucher.invoice_number and invoice.invoice_number:
+            if voucher.invoice_number == invoice.invoice_number:
+                score += 5
 
         return score
+
+    def _string_similarity(self, s1: str, s2: str) -> float:
+        """计算两个字符串的相似度（0-1）"""
+        if not s1 or not s2:
+            return 0.0
+
+        # 使用简单的 Jaccard 相似度
+        set1 = set(s1.lower())
+        set2 = set(s2.lower())
+
+        intersection = len(set1 & set2)
+        union = len(set1 | set2)
+
+        if union == 0:
+            return 0.0
+
+        return intersection / union
 
     def _normalize_merchant(self, name: str) -> str:
         """标准化商家名称"""

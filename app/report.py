@@ -1,21 +1,40 @@
 """报表生成模块 - 生成 Excel 统计报表"""
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 from datetime import datetime
 
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 from openpyxl.utils import get_column_letter
+from openpyxl.chart import PieChart, Reference
 
 from .analyzer import InvoiceInfo
 from .config import INVOICE_CATEGORIES
 
 
+class ReportConfig:
+    """报表配置"""
+    def __init__(self,
+                 company_name: str = "",
+                 department: str = "",
+                 submitter: str = "",
+                 currency_symbol: str = "¥",
+                 include_charts: bool = True,
+                 date_format: str = "%Y-%m-%d"):
+        self.company_name = company_name
+        self.department = department
+        self.submitter = submitter
+        self.currency_symbol = currency_symbol
+        self.include_charts = include_charts
+        self.date_format = date_format
+
+
 class ReportGenerator:
     """报表生成器"""
 
-    def __init__(self, output_dir: str):
+    def __init__(self, output_dir: str, config: Optional[ReportConfig] = None):
         self.output_dir = Path(output_dir)
+        self.config = config or ReportConfig()
 
     def _sanitize_sheet_name(self, name: str) -> str:
         """清理工作表名称，移除Excel不允许的字符"""
@@ -163,8 +182,11 @@ class ReportGenerator:
 
         # 定义样式
         header_font = Font(bold=True, size=12)
+        title_font = Font(bold=True, size=16)
+        subtitle_font = Font(size=11, color="666666")
         header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
         header_font_white = Font(bold=True, size=12, color="FFFFFF")
+        light_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
         border = Border(
             left=Side(style='thin'),
             right=Side(style='thin'),
@@ -173,29 +195,57 @@ class ReportGenerator:
         )
         center_align = Alignment(horizontal='center', vertical='center')
         right_align = Alignment(horizontal='right', vertical='center')
+        left_align = Alignment(horizontal='left', vertical='center')
+
+        # 公司信息区域（如果配置了）
+        current_row = 1
+        if self.config.company_name:
+            ws.merge_cells(f'A{current_row}:D{current_row}')
+            ws[f'A{current_row}'] = self.config.company_name
+            ws[f'A{current_row}'].font = Font(bold=True, size=14)
+            ws[f'A{current_row}'].alignment = center_align
+            current_row += 1
+
+        if self.config.department:
+            ws.merge_cells(f'A{current_row}:D{current_row}')
+            ws[f'A{current_row}'] = f"部门: {self.config.department}"
+            ws[f'A{current_row}'].font = subtitle_font
+            ws[f'A{current_row}'].alignment = center_align
+            current_row += 1
 
         # 标题
-        ws.merge_cells('A1:D1')
-        ws['A1'] = f"报销汇总表 - {datetime.now().strftime('%Y-%m-%d')}"
-        ws['A1'].font = Font(bold=True, size=16)
-        ws['A1'].alignment = center_align
+        ws.merge_cells(f'A{current_row}:D{current_row}')
+        title_cell = ws[f'A{current_row}']
+        title_cell.value = f"报销汇总表 - {datetime.now().strftime('%Y-%m-%d')}"
+        title_cell.font = title_font
+        title_cell.alignment = center_align
+        current_row += 2
+
+        # 填报人信息
+        if self.config.submitter:
+            ws[f'A{current_row}'] = f"填报人: {self.config.submitter}"
+            ws[f'A{current_row}'].font = subtitle_font
+            current_row += 1
 
         # 表头
+        header_row = current_row
         headers = ['类别', '发票数量', '金额（元）', '备注']
         for col, header in enumerate(headers, 1):
-            cell = ws.cell(row=3, column=col, value=header)
+            cell = ws.cell(row=header_row, column=col, value=header)
             cell.font = header_font_white
             cell.fill = header_fill
             cell.border = border
             cell.alignment = center_align
 
         # 数据行 - 使用公式引用明细表
-        row = 4
+        row = header_row + 1
         count_cells = []  # 记录数量单元格，用于合计
         amount_cells = []  # 记录金额单元格，用于合计
+        category_data = []  # 用于图表数据
 
-        # 按预定义顺序排列类别
-        category_order = ['打车票', '火车飞机票', '住宿费', '餐费', '其他']
+        # 按预定义顺序排列类别（包含新的分类）
+        category_order = ['打车票', '火车飞机票', '住宿费', '餐费', '停车费', '加油费',
+                         '办公用品', '通讯费', '快递费', '医疗费用', '业务招待', '其他']
         for category_name in category_order:
             if category_name in sheet_info:
                 sheet_name, data_rows = sheet_info[category_name]
@@ -203,14 +253,14 @@ class ReportGenerator:
 
                 ws.cell(row=row, column=1, value=category_name).border = border
 
-                # 发票数量公式：统计有数据的行数（用 COUNTA 统计 A 列，减去表头）
+                # 发票数量公式
                 count_formula = f"=COUNTA('{sheet_name}'!A2:A{last_data_row})"
                 count_cell = ws.cell(row=row, column=2, value=count_formula)
                 count_cell.border = border
                 count_cell.alignment = center_align
                 count_cells.append(f"B{row}")
 
-                # 金额公式：使用明细表的合计单元格（在最后一行的D列）
+                # 金额公式
                 amount_formula = f"='{sheet_name}'!D{last_data_row + 1}"
                 amount_cell = ws.cell(row=row, column=3, value=amount_formula)
                 amount_cell.border = border
@@ -218,12 +268,20 @@ class ReportGenerator:
                 amount_cell.number_format = '#,##0.00'
                 amount_cells.append(f"C{row}")
 
+                # 备注（如果有）
                 ws.cell(row=row, column=4, value="").border = border
+
+                # 记录图表数据
+                category_data.append((row, category_name))
                 row += 1
 
-        # 合计行 - 使用 SUM 公式
+        data_end_row = row - 1
+
+        # 合计行
+        row += 1
         ws.cell(row=row, column=1, value="合计").font = header_font
         ws.cell(row=row, column=1).border = border
+        ws.cell(row=row, column=1).fill = light_fill
 
         # 数量合计
         if count_cells:
@@ -234,6 +292,7 @@ class ReportGenerator:
         count_total_cell.font = header_font
         count_total_cell.border = border
         count_total_cell.alignment = center_align
+        count_total_cell.fill = light_fill
 
         # 金额合计
         if amount_cells:
@@ -245,17 +304,48 @@ class ReportGenerator:
         amount_total_cell.border = border
         amount_total_cell.alignment = right_align
         amount_total_cell.number_format = '#,##0.00'
+        amount_total_cell.fill = light_fill
 
         ws.cell(row=row, column=4, value="").border = border
+        ws.cell(row=row, column=4).fill = light_fill
+
+        # 添加图表
+        if self.config.include_charts and category_data:
+            self._add_pie_chart(ws, header_row, data_end_row, row)
 
         # 调整列宽
-        ws.column_dimensions['A'].width = 15
+        ws.column_dimensions['A'].width = 18
         ws.column_dimensions['B'].width = 12
         ws.column_dimensions['C'].width = 15
         ws.column_dimensions['D'].width = 20
 
+    def _add_pie_chart(self, ws, header_row: int, data_end_row: int, total_row: int):
+        """添加饼图"""
+        from openpyxl.chart import PieChart, Reference
 
-def generate_report(output_dir: str, categorized: Dict[str, List[InvoiceInfo]]) -> str:
+        chart = PieChart()
+        chart.title = "报销金额分布"
+        chart.height = 10
+        chart.width = 15
+
+        # 数据范围
+        labels = Reference(ws, min_col=1, min_row=header_row + 1, max_row=data_end_row)
+        data = Reference(ws, min_col=3, min_row=header_row, max_row=data_end_row)
+
+        chart.add_data(data, titles_from_data=True)
+        chart.set_categories(labels)
+
+        # 添加图表到工作表（放在汇总表右侧）
+        ws.add_chart(chart, "F5")
+
+
+def generate_report(output_dir: str, categorized: Dict[str, List[InvoiceInfo]],
+                   company_name: str = "", department: str = "", submitter: str = "") -> str:
     """便捷函数：生成报表"""
-    generator = ReportGenerator(output_dir)
+    config = ReportConfig(
+        company_name=company_name,
+        department=department,
+        submitter=submitter
+    )
+    generator = ReportGenerator(output_dir, config=config)
     return generator.generate(categorized)
