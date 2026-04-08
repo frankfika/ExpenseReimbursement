@@ -8,20 +8,17 @@ class TestFileOrganizer:
     """FileOrganizer 类测试"""
 
     def test_init_creates_directories(self, temp_dir):
-        """测试初始化创建分类目录"""
+        """测试初始化扫描出差时间段目录"""
         from app.organizer import FileOrganizer
-        from app.config import INVOICE_CATEGORIES, PENDING_CATEGORY
+
+        # 创建一些出差时间段文件夹
+        (Path(temp_dir) / "深圳出差3.15-3.18").mkdir()
+        (Path(temp_dir) / "北京出差4.1").mkdir()
 
         organizer = FileOrganizer(temp_dir, copy_mode=True)
 
-        # 检查所有分类目录是否创建
-        for category_name in INVOICE_CATEGORIES.values():
-            category_dir = Path(temp_dir) / category_name
-            assert category_dir.exists()
-
-        # 检查待确认目录
-        pending_dir = Path(temp_dir) / PENDING_CATEGORY
-        assert pending_dir.exists()
+        # 验证出差时间段被正确识别
+        assert len(organizer.trips) == 2
 
     def test_sanitize_filename(self, temp_dir):
         """测试文件名清理"""

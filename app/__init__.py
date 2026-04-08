@@ -20,3 +20,5 @@ __all__ = [
     'FileOrganizer',
     'generate_report',
 ]
+
+# UI 工具可以通过 from app.ui import ... 单独导入

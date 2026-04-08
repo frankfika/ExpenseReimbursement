@@ -11,10 +11,32 @@ import io
 from .config import SUPPORTED_IMAGE_FORMATS, SUPPORTED_PDF_FORMAT
 
 
-def image_to_base64(image_path: str) -> str:
-    """将图片转换为 base64 编码"""
-    with open(image_path, "rb") as f:
-        return base64.b64encode(f.read()).decode("utf-8")
+def image_to_base64(image_path: str, max_size: tuple = (1920, 1920), quality: int = 85) -> str:
+    """将图片转换为 base64 编码，自动压缩大图片
+
+    Args:
+        image_path: 图片路径
+        max_size: 最大尺寸 (宽, 高)
+        quality: JPEG 压缩质量 (1-95)
+
+    Returns:
+        base64 编码的图片数据
+    """
+    with Image.open(image_path) as img:
+        # 转换为 RGB（处理 RGBA 或 P 模式）
+        if img.mode in ('RGBA', 'P'):
+            img = img.convert('RGB')
+
+        # 如果图片太大，进行缩放
+        if img.width > max_size[0] or img.height > max_size[1]:
+            img.thumbnail(max_size, Image.Resampling.LANCZOS)
+
+        # 保存到内存
+        buffer = io.BytesIO()
+        img.save(buffer, format='JPEG', quality=quality, optimize=True)
+        buffer.seek(0)
+
+        return base64.b64encode(buffer.read()).decode("utf-8")
 
 
 def get_image_mime_type(file_path: str) -> str:
@@ -119,14 +141,13 @@ class OCRHandler:
                 # 使用 OCR 识别
                 img = Image.open(io.BytesIO(img_data))
                 # 使用 tempfile 创建临时文件，确保自动清理
-                temp_file = None
+                temp_path = None
                 try:
-                    temp_file = tempfile.NamedTemporaryFile(
+                    with tempfile.NamedTemporaryFile(
                         suffix='.png', prefix=f'pdf_page_{page_num}_', delete=False
-                    )
-                    temp_path = temp_file.name
-                    temp_file.close()
-                    img.save(temp_path)
+                    ) as temp_file:
+                        temp_path = temp_file.name
+                        img.save(temp_path)
 
                     ocr_text = self._extract_from_image(temp_path)
                     if ocr_text:
@@ -148,22 +169,39 @@ class OCRHandler:
         return suffix in SUPPORTED_IMAGE_FORMATS or suffix == SUPPORTED_PDF_FORMAT
 
 
-def pdf_to_images(pdf_path: str) -> list:
-    """将 PDF 转换为图片列表（用于视觉模型）"""
+def pdf_to_images(pdf_path: str, max_size: tuple = (1920, 1920), quality: int = 85) -> list:
+    """将 PDF 转换为图片列表（用于视觉模型）
+
+    Args:
+        pdf_path: PDF 文件路径
+        max_size: 最大尺寸 (宽, 高)
+        quality: JPEG 压缩质量 (1-95)
+    """
     images = []
     doc = fitz.open(pdf_path)
 
     for page_num in range(len(doc)):
         page = doc[page_num]
         pix = page.get_pixmap(dpi=150)  # 150 DPI 足够识别且不会太大
-        img_data = pix.tobytes("png")
 
-        # 转换为 base64
-        img_base64 = base64.b64encode(img_data).decode("utf-8")
+        # 转换为 PIL Image
+        img_data = pix.tobytes("png")
+        img = Image.open(io.BytesIO(img_data))
+
+        # 如果图片太大，进行缩放
+        if img.width > max_size[0] or img.height > max_size[1]:
+            img.thumbnail(max_size, Image.Resampling.LANCZOS)
+
+        # 压缩并转换为 base64
+        buffer = io.BytesIO()
+        img.convert('RGB').save(buffer, format='JPEG', quality=quality, optimize=True)
+        buffer.seek(0)
+        img_base64 = base64.b64encode(buffer.read()).decode("utf-8")
+
         images.append({
             "type": "image_url",
             "image_url": {
-                "url": f"data:image/png;base64,{img_base64}"
+                "url": f"data:image/jpeg;base64,{img_base64}"
             }
         })
 
@@ -171,20 +209,25 @@ def pdf_to_images(pdf_path: str) -> list:
     return images
 
 
-def file_to_image_content(file_path: str) -> list:
-    """将文件转换为视觉模型可用的图片内容"""
+def file_to_image_content(file_path: str, max_size: tuple = (1920, 1920), quality: int = 85) -> list:
+    """将文件转换为视觉模型可用的图片内容
+
+    Args:
+        file_path: 文件路径
+        max_size: 最大尺寸 (宽, 高)
+        quality: JPEG 压缩质量 (1-95)
+    """
     file_path = Path(file_path)
     suffix = file_path.suffix.lower()
 
     if suffix == ".pdf":
-        return pdf_to_images(str(file_path))
+        return pdf_to_images(str(file_path), max_size=max_size, quality=quality)
     elif suffix in SUPPORTED_IMAGE_FORMATS:
-        img_base64 = image_to_base64(str(file_path))
-        mime_type = get_image_mime_type(str(file_path))
+        img_base64 = image_to_base64(str(file_path), max_size=max_size, quality=quality)
         return [{
             "type": "image_url",
             "image_url": {
-                "url": f"data:{mime_type};base64,{img_base64}"
+                "url": f"data:image/jpeg;base64,{img_base64}"
             }
         }]
     else:

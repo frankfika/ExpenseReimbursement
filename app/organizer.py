@@ -1,34 +1,147 @@
-"""文件分类和配对模块"""
+"""文件分类和配对模块 - 按出差时间段归档"""
 import os
 import shutil
 import re
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 from datetime import datetime, timedelta
 from collections import defaultdict
 
-from .config import INVOICE_CATEGORIES, PENDING_CATEGORY
+from .config import INVOICE_CATEGORIES, PENDING_CATEGORY, get_current_year
 from .analyzer import InvoiceInfo
 
 
+def _infer_year(month: int) -> int:
+    """根据月份智能推断年份
+
+    规则：
+    - 如果月份在当前月的前后3个月内，使用当前年份
+    - 如果月份比当前月晚6个月以上，使用去年
+    - 如果月份比当前月早6个月以上，使用明年
+    """
+    current_year = get_current_year()
+    current_month = datetime.now().month
+
+    month_diff = month - current_month
+
+    if abs(month_diff) <= 3:
+        return current_year
+    elif month_diff > 6:
+        return current_year - 1
+    elif month_diff < -6:
+        return current_year + 1
+    else:
+        return current_year
+
+
+def parse_trip_folders(output_dir: Path) -> List[Tuple[str, datetime, datetime]]:
+    """
+    解析输出目录中的出差时间段文件夹
+
+    支持的格式：
+    - 深圳广州出差3.3-3.6
+    - 南沙出差3.15 - 3.20
+    - 新加坡来访3.11
+    - 2024-01-01 至 2024-01-05
+
+    返回: [(文件夹名, 开始日期, 结束日期), ...]
+    """
+    trips = []
+
+    if not output_dir.exists():
+        return trips
+
+    for folder in output_dir.iterdir():
+        if not folder.is_dir():
+            continue
+
+        folder_name = folder.name
+
+        # 尝试匹配各种日期格式
+        # 格式1: 3.3-3.6 或 3.15 - 3.20
+        match = re.search(r'(\d{1,2})\.\s*(\d{1,2})\s*[-至]\s*(\d{1,2})\.\s*(\d{1,2})', folder_name)
+        if match:
+            start_month, start_day = int(match.group(1)), int(match.group(2))
+            end_month, end_day = int(match.group(3)), int(match.group(4))
+            start_year = _infer_year(start_month)
+            end_year = start_year if start_month <= end_month else _infer_year(end_month)
+            start_date = datetime(start_year, start_month, start_day)
+            end_date = datetime(end_year, end_month, end_day)
+            trips.append((folder_name, start_date, end_date))
+            continue
+
+        # 格式2: 3.11 (单日)
+        match = re.search(r'(\d{1,2})\.(\d{1,2})', folder_name)
+        if match:
+            month, day = int(match.group(1)), int(match.group(2))
+            year = _infer_year(month)
+            date = datetime(year, month, day)
+            trips.append((folder_name, date, date))
+            continue
+
+        # 格式3: 2024-01-01 至 2024-01-05
+        match = re.search(r'(\d{4})-(\d{2})-(\d{2})\s*[-至]\s*(\d{4})-(\d{2})-(\d{2})', folder_name)
+        if match:
+            start_date = datetime(int(match.group(1)), int(match.group(2)), int(match.group(3)))
+            end_date = datetime(int(match.group(4)), int(match.group(5)), int(match.group(6)))
+            trips.append((folder_name, start_date, end_date))
+            continue
+
+        # 格式4: 2024-01-01 (单日)
+        match = re.search(r'(\d{4})-(\d{2})-(\d{2})', folder_name)
+        if match:
+            date = datetime(int(match.group(1)), int(match.group(2)), int(match.group(3)))
+            trips.append((folder_name, date, date))
+
+    # 按开始日期排序
+    trips.sort(key=lambda x: x[1])
+    return trips
+
+
+def find_trip_folder(invoice_date: str, trips: List[Tuple[str, datetime, datetime]]) -> Optional[str]:
+    """
+    根据发票日期找到对应的出差文件夹
+
+    Args:
+        invoice_date: 发票日期 (YYYY-MM-DD 格式)
+        trips: 出差时间段列表
+
+    Returns:
+        对应的出差文件夹名，如果没有找到则返回 None
+    """
+    if not invoice_date:
+        return None
+
+    try:
+        date = datetime.strptime(invoice_date, "%Y-%m-%d")
+    except ValueError:
+        return None
+
+    for folder_name, start_date, end_date in trips:
+        if start_date <= date <= end_date:
+            return folder_name
+
+    return None
+
+
 class FileOrganizer:
-    """文件组织器 - 负责分类、配对、移动/复制文件"""
+    """文件组织器 - 负责按出差时间段分类、配对、移动/复制文件"""
 
     def __init__(self, output_dir: str, copy_mode: bool = False):
         self.output_dir = Path(output_dir)
         self.copy_mode = copy_mode  # True=复制, False=移动
-        self._ensure_category_dirs()
-
-    def _ensure_category_dirs(self):
-        """确保分类目录存在"""
-        for category_name in INVOICE_CATEGORIES.values():
-            (self.output_dir / category_name).mkdir(parents=True, exist_ok=True)
-        # 待确认目录
-        (self.output_dir / PENDING_CATEGORY).mkdir(parents=True, exist_ok=True)
+        # 解析已有的出差文件夹
+        self.trips = parse_trip_folders(self.output_dir)
+        print(f"\n📅 发现 {len(self.trips)} 个出差时间段:")
+        for name, start, end in self.trips:
+            if start == end:
+                print(f"  • {name}: {start.strftime('%m月%d日')}")
+            else:
+                print(f"  • {name}: {start.strftime('%m月%d日')} - {end.strftime('%m月%d日')}")
 
     def organize(self, invoice_infos: List[InvoiceInfo]) -> Dict[str, List[InvoiceInfo]]:
         """
-        组织所有发票文件
+        组织所有发票文件 - 按出差时间段归档
 
         Args:
             invoice_infos: 发票信息列表
@@ -39,7 +152,7 @@ class FileOrganizer:
         # 1. 配对凭证和发票
         paired_groups = self._pair_vouchers_and_invoices(invoice_infos)
 
-        # 2. 移动文件到对应目录
+        # 2. 按出差时间段和类型组织文件
         categorized = defaultdict(list)
 
         for group in paired_groups:
@@ -59,23 +172,40 @@ class FileOrganizer:
                         break
 
             # 判断是否需要放到"待确认"目录
-            # 条件：独立发票（没有配对凭证）且没有 service_date
             needs_confirmation = False
             if len(group) == 1 and group[0].is_invoice:
-                # 独立发票，检查是否有实际消费日期
                 if not group[0].service_date:
                     needs_confirmation = True
 
-            # 获取分类
+            # 获取类型分类
             if needs_confirmation:
                 category_name = PENDING_CATEGORY
             else:
                 category = self._get_category(group)
                 category_name = INVOICE_CATEGORIES.get(category, "其他")
 
-            # 创建子文件夹名称
+            # 找到对应的出差文件夹
+            trip_folder = find_trip_folder(group_date, self.trips)
+
+            if trip_folder:
+                # 在出差文件夹内部按类型分类
+                target_folder = self.output_dir / trip_folder / category_name
+                trip_name = trip_folder
+            else:
+                # 未匹配到任何出差时间段
+                # 餐饮票放到根目录，其他放到未分类
+                if category_name == "餐费":
+                    target_folder = self.output_dir / category_name
+                    trip_name = "餐费"
+                    print(f"  🍽️  餐饮票日期 {group_date} 未匹配出差时间段，放到根目录 {category_name}")
+                else:
+                    target_folder = self.output_dir / "未分类" / category_name
+                    trip_name = "未分类"
+                    print(f"  ⚠️  日期 {group_date} 未匹配出差时间段，放到未分类/{category_name}")
+
+            # 创建子文件夹名称（按日期）
             folder_name = self._generate_folder_name(group)
-            target_folder = self.output_dir / category_name / folder_name
+            target_folder = target_folder / folder_name
 
             # 确保文件夹存在
             target_folder.mkdir(parents=True, exist_ok=True)
@@ -146,21 +276,34 @@ class FileOrganizer:
         计算凭证和发票的匹配分数
 
         配对逻辑：以凭证/行程单的实际消费日期为准（因为发票可能是后补开的）
+        注意：同类发票（如多个打车票）不应互相配对，应该各自独立
+        不同类型的发票和凭证（如酒店凭证+机票发票）也不应配对
         """
         score = 0
 
-        # 0. 订单号匹配（最高优先级）- 用于配对发票和水单
+        # 0. 类型兼容性检查 - 不同类型不应该配对
+        if voucher.type != invoice.type:
+            return 0  # 酒店凭证不能和机票发票配对
+
+        # 1. 同类型发票检查 - 如果两个都是发票且类型相同，不应该配对（各自是独立的消费）
+        # 配对应该是"凭证+发票"或"水单+发票"
+        if voucher.is_invoice and invoice.is_invoice and voucher.type == invoice.type:
+            # 两个同类发票不应该配对，除非有强关联信号（如订单号完全匹配）
+            if not (voucher.order_number and invoice.order_number and voucher.order_number == invoice.order_number):
+                return 0  # 直接返回0，不配对
+
+        # 1. 订单号匹配（最高优先级）- 用于配对发票和水单
         if voucher.order_number and invoice.order_number:
             if voucher.order_number == invoice.order_number:
                 score += 10  # 订单号完全匹配，直接配对
 
-        # 1. 平台/商家匹配（最重要）
+        # 2. 平台/商家匹配（最重要）
         if self._normalize_merchant(voucher.subtype) == self._normalize_merchant(invoice.subtype):
             score += 3
         elif self._normalize_merchant(voucher.merchant) == self._normalize_merchant(invoice.merchant):
             score += 2
 
-        # 2. 日期匹配 - 以凭证的实际消费日期为准
+        # 3. 日期匹配 - 以凭证的实际消费日期为准
         # 凭证的 service_date 应该和发票的 service_date 匹配
         # 发票的开票日期(date)可能晚于实际消费日期
         voucher_date = voucher.get_actual_date()
@@ -174,11 +317,11 @@ class FileOrganizer:
                 if days_diff == 0:
                     score += 2  # 日期完全匹配
                 elif days_diff <= 1:
-                    score += 1  # 相差1天也可接受
+                    score += 1  # 相差1天也可接受（仅对 voucher+invoice 组合）
             except ValueError:
                 pass
 
-        # 3. 金额匹配
+        # 4. 金额匹配
         if voucher.amount > 0 and invoice.amount > 0:
             diff = abs(voucher.amount - invoice.amount)
             max_amount = max(voucher.amount, invoice.amount)
@@ -187,7 +330,7 @@ class FileOrganizer:
             elif diff <= max_amount * 0.05:  # 5% 误差范围内
                 score += 1
 
-        # 4. 类型匹配
+        # 5. 类型匹配（仅对 voucher+invoice 组合）
         if voucher.type == invoice.type:
             score += 1
 
@@ -344,15 +487,14 @@ class FileOrganizer:
     def _move_file(self, src: str, dst: Path):
         """移动或复制文件"""
         src_path = Path(src)
+        action = "复制" if self.copy_mode else "移动"
         # 使用 try/except 而不是预检查（避免 TOCTOU 竞态）
         try:
             # 尝试直接操作
             if self.copy_mode:
                 shutil.copy2(str(src_path), str(dst))
-                action = "复制"
             else:
                 shutil.move(str(src_path), str(dst))
-                action = "移动"
         except FileExistsError:
             # 目标已存在，添加序号
             stem = dst.stem
@@ -363,8 +505,6 @@ class FileOrganizer:
                 counter += 1
             if self.copy_mode:
                 shutil.copy2(str(src_path), str(dst))
-                action = "复制"
             else:
                 shutil.move(str(src_path), str(dst))
-                action = "移动"
         print(f"  {action}: {src_path.name} -> {dst.relative_to(self.output_dir)}")

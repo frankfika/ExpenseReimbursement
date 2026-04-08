@@ -2,6 +2,7 @@
 import os
 import sys
 from pathlib import Path
+from datetime import datetime
 from dotenv import load_dotenv
 
 
@@ -147,11 +148,16 @@ INVOICE_CATEGORIES = {
 # 特殊分类
 PENDING_CATEGORY = "待确认"  # 无法确定消费日期的发票
 
+def get_current_year() -> int:
+    """获取当前年份"""
+    return datetime.now().year
+
+
 # 分类关键词（用于辅助识别）
 CATEGORY_KEYWORDS = {
     "taxi": ["滴滴", "高德", "美团打车", "曹操", "首汽", "出租车", "网约车", "快车", "专车", "打车"],
     "train": ["12306", "火车票", "高铁", "动车", "铁路", "车票"],
-    "flight": ["航空", "机票", "登机牌", "航班", "携程", "飞猪", "去哪儿"],
+    "flight": ["航空", "机票", "登机牌", "航班", "飞机"],
     "hotel": ["酒店", "宾馆", "住宿", "客房", "民宿", "如家", "汉庭", "全季", "亚朵", "希尔顿", "万豪"],
     "meal": ["餐饮", "餐厅", "饭店", "美团", "饿了么", "外卖", "午餐", "晚餐", "早餐"]
 }

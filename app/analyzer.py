@@ -1,6 +1,7 @@
 """发票分析模块 - 支持本地规则分析、API 文本分析和视觉模型分析"""
 import json
 import re
+import time
 from dataclasses import dataclass, asdict
 from typing import Optional, List
 import requests
@@ -11,6 +12,44 @@ from .ocr import file_to_image_content
 # 模块级正则表达式常量（避免重复编译）
 _CODE_BLOCK_JSON_RE = re.compile(r'```(?:json)?\s*(\{[\s\S]*?\})\s*```')
 _JSON_BRACE_RE = re.compile(r'\{[\s\S]*\}')
+
+
+def _retry_with_backoff(max_retries: int = 3, base_delay: float = 1.0):
+    """重试装饰器 - 指数退避"""
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except requests.exceptions.Timeout:
+                    if attempt < max_retries - 1:
+                        delay = base_delay * (2 ** attempt)
+                        print(f"  [API超时，{delay:.1f}秒后重试... ({attempt + 1}/{max_retries})]")
+                        time.sleep(delay)
+                    else:
+                        raise
+                except requests.exceptions.HTTPError as e:
+                    if e.response.status_code == 429:  # Rate limit
+                        if attempt < max_retries - 1:
+                            delay = base_delay * (2 ** attempt) + 1
+                            print(f"  [API限流，{delay:.1f}秒后重试... ({attempt + 1}/{max_retries})]")
+                            time.sleep(delay)
+                        else:
+                            raise
+                    elif e.response.status_code >= 500:  # Server error
+                        if attempt < max_retries - 1:
+                            delay = base_delay * (2 ** attempt)
+                            print(f"  [服务器错误，{delay:.1f}秒后重试... ({attempt + 1}/{max_retries})]")
+                            time.sleep(delay)
+                        else:
+                            raise
+                    else:
+                        raise
+                except Exception:
+                    raise
+            return None
+        return wrapper
+    return decorator
 
 
 @dataclass
@@ -123,30 +162,53 @@ class InvoiceAnalyzer:
 分类说明：
 - taxi: 出租车、网约车（滴滴、高德、美团打车等）
 - train: 火车票（12306、高铁、动车等）
-- flight: 机票（各航空公司、机场）
+- flight: 机票（各航空公司、机场）。注意：仅有机票代订服务或OTA平台（如携程、飞猪、去哪儿）不等于机票发票本身，需要有具体航班信息（航班号、出发地、目的地）才能判断为flight
 - hotel: 住宿（酒店、宾馆、民宿）
 - meal: 餐饮（餐厅、外卖）
 - other: 其他类型
+
+机票/火车票/酒店特别注意事项：
+- 这类发票通常有两个日期：开票日期（date字段）和实际行程/入住日期（service_date字段）
+- service_date 必须是实际的航班出发日期、火车出发日期、酒店入住日期，绝不能是开票日期！
+- 如果发现发票上只有一个日期，请根据行程描述（如"3月15日北京到上海"）推断实际行程日期
+- 开票日期通常晚于实际行程日期，例如3月1日起飞的机票，可能3月5日才开具发票
 
 is_invoice 说明：
 - true: 这是正式发票（有发票代码、发票号码、税额等）
 - false: 这是行程单、收据、凭证、水单等非正式发票
 
+金额提取说明（非常重要）：
+- 必须提取"实际支付金额"或"价税合计"，不是单独的税额
+- 如果发票上有多个金额（票价、税额、服务费等），请提取最大金额（通常是总费用）
+- 单位通常是元，请直接返回数字
+- **特别注意：不要相信文件名中的任何数字金额！文件名仅供参考，发票上的实际金额必须从发票内容中提取**
+- 发票通常会在"价税合计"、"合计"、"实付"、"总金额"等字段标注总金额
+- 酒店发票常见金额位置："房费合计"、"住宿费"、"总金额"
+- 打车发票常见金额位置："实付"、"金额"
+- 餐饮发票常见金额位置："合计金额"、"消费金额"
+
 日期说明（非常重要）：
-- date: 开票日期（发票上的开票时间）
+- date: 开票日期（发票上的开票时间），通常在发票右上角或顶部标注"开票日期"
 - service_date: 实际消费/服务日期，这是最重要的日期！
-  - 打车：乘车时间、行程开始时间
-  - 火车/飞机：乘车/乘机日期、出发时间
-  - 酒店：入住日期
-  - 餐饮：消费日期
-  - 注意：发票可能是后补开的，开票日期可能晚于实际消费日期
+  - 打车：乘车时间、行程开始时间，通常在行程详情中
+  - 火车/飞机：实际乘机/乘车日期，不是开票日期！通常在"出发日期"、"乘机日期"字段
+  - 酒店：入住日期，通常在"入住时间"、"到店日期"字段
+  - 餐饮：消费日期，通常在"消费时间"、"交易日期"字段
+  - 特别注意：机票发票上通常同时有"开票日期"和"行程日期"两个日期，请务必区分！service_date应该是航班出发日期，不是开票日期
+  - 火车票通常有"出发日期"或"乘车日期"
+  - 酒店发票通常有"入住日期"和"离店日期"
+
+is_invoice 判断规则：
+- true: 有"发票代码"、"发票号码"、"增值税"、"电子发票"等正式发票要素
+- false: 仅有"行程单"、"水单"、"收据"、"订单确认"、"消费凭证"等字样，无正式发票要素
+- 重要：酒店水单/入住单通常是凭证(is_invoice=false)，正式发票通常是单独的PDF
+- 重要：机票行程单通常是凭证(is_invoice=false)，正式发票会显示"航空运输电子客票行程单"
 
 注意：
-1. 金额请提取实际支付金额，不是税额
-2. 日期请转换为 YYYY-MM-DD 格式
-3. service_date 比 date 更重要，请优先准确提取实际消费日期
-4. 如果某字段无法识别，请合理推断或留空
-5. 只返回JSON，不要有其他文字"""
+1. 日期请转换为 YYYY-MM-DD 格式，如果不确定年份，尝试根据上下文推断
+2. service_date 比 date 更重要，请优先准确提取实际消费日期
+3. 如果某字段无法识别，请合理推断或留空
+4. 只返回JSON，不要有其他文字"""
 
     def __init__(self, api_key: str = None, base_url: str = None):
         self.api_key = api_key or DEEPSEEK_API_KEY
@@ -178,7 +240,12 @@ is_invoice 说明：
             return self._create_empty_info(file_path, f"分析失败: {str(e)}", ocr_text)
 
     def _call_api(self, ocr_text: str) -> dict:
-        """调用 DeepSeek API"""
+        """调用 DeepSeek API（带重试机制）"""
+        return self._call_api_with_retry(ocr_text)
+
+    @_retry_with_backoff(max_retries=3, base_delay=1.0)
+    def _call_api_with_retry(self, ocr_text: str) -> dict:
+        """调用 DeepSeek API（内部实现）"""
         url = f"{self.base_url}/v1/chat/completions"
 
         headers = {
@@ -263,30 +330,53 @@ class VisionAnalyzer:
 分类说明：
 - taxi: 出租车、网约车（滴滴、高德、美团打车等）
 - train: 火车票（12306、高铁、动车等）
-- flight: 机票（各航空公司、机场）
+- flight: 机票（各航空公司、机场）。注意：仅有机票代订服务或OTA平台（如携程、飞猪、去哪儿）不等于机票发票本身，需要有具体航班信息（航班号、出发地、目的地）才能判断为flight
 - hotel: 住宿（酒店、宾馆、民宿）
 - meal: 餐饮（餐厅、外卖）
 - other: 其他类型
+
+机票/火车票/酒店特别注意事项：
+- 这类发票通常有两个日期：开票日期（date字段）和实际行程/入住日期（service_date字段）
+- service_date 必须是实际的航班出发日期、火车出发日期、酒店入住日期，绝不能是开票日期！
+- 如果发现发票上只有一个日期，请根据行程描述（如"3月15日北京到上海"）推断实际行程日期
+- 开票日期通常晚于实际行程日期，例如3月1日起飞的机票，可能3月5日才开具发票
 
 is_invoice 说明：
 - true: 这是正式发票（有发票代码、发票号码、税额等）
 - false: 这是行程单、收据、凭证、水单等非正式发票
 
+金额提取说明（非常重要）：
+- 必须提取"实际支付金额"或"价税合计"，不是单独的税额
+- 如果发票上有多个金额（票价、税额、服务费等），请提取最大金额（通常是总费用）
+- 单位通常是元，请直接返回数字
+- **特别注意：不要相信文件名中的任何数字金额！文件名仅供参考，发票上的实际金额必须从发票内容中提取**
+- 发票通常会在"价税合计"、"合计"、"实付"、"总金额"等字段标注总金额
+- 酒店发票常见金额位置："房费合计"、"住宿费"、"总金额"
+- 打车发票常见金额位置："实付"、"金额"
+- 餐饮发票常见金额位置："合计金额"、"消费金额"
+
 日期说明（非常重要）：
-- date: 开票日期（发票上的开票时间）
+- date: 开票日期（发票上的开票时间），通常在发票右上角或顶部标注"开票日期"
 - service_date: 实际消费/服务日期，这是最重要的日期！
-  - 打车：乘车时间、行程开始时间
-  - 火车/飞机：乘车/乘机日期、出发时间
-  - 酒店：入住日期
-  - 餐饮：消费日期
-  - 注意：发票可能是后补开的，开票日期可能晚于实际消费日期
+  - 打车：乘车时间、行程开始时间，通常在行程详情中
+  - 火车/飞机：实际乘机/乘车日期，不是开票日期！通常在"出发日期"、"乘机日期"字段
+  - 酒店：入住日期，通常在"入住时间"、"到店日期"字段
+  - 餐饮：消费日期，通常在"消费时间"、"交易日期"字段
+  - 特别注意：机票发票上通常同时有"开票日期"和"行程日期"两个日期，请务必区分！service_date应该是航班出发日期，不是开票日期
+  - 火车票通常有"出发日期"或"乘车日期"
+  - 酒店发票通常有"入住日期"和"离店日期"
+
+is_invoice 判断规则：
+- true: 有"发票代码"、"发票号码"、"增值税"、"电子发票"等正式发票要素
+- false: 仅有"行程单"、"水单"、"收据"、"订单确认"、"消费凭证"等字样，无正式发票要素
+- 重要：酒店水单/入住单通常是凭证(is_invoice=false)，正式发票通常是单独的PDF
+- 重要：机票行程单通常是凭证(is_invoice=false)，正式发票会显示"航空运输电子客票行程单"
 
 注意：
-1. 金额请提取实际支付金额，不是税额
-2. 日期请转换为 YYYY-MM-DD 格式
-3. service_date 比 date 更重要，请优先准确提取实际消费日期
-4. ocr_text 字段请提取图片中的主要文字，供后续参考
-5. 只返回JSON，不要有其他文字"""
+1. 日期请转换为 YYYY-MM-DD 格式，如果不确定年份，尝试根据上下文推断
+2. service_date 比 date 更重要，请优先准确提取实际消费日期
+3. ocr_text 字段请提取图片中的主要文字，供后续参考
+4. 只返回JSON，不要有其他文字"""
 
     def __init__(self, api_key: str = None, base_url: str = None):
         self.api_key = api_key or DEEPSEEK_API_KEY
@@ -315,7 +405,12 @@ is_invoice 说明：
             return self._create_empty_info(file_path, f"视觉分析失败: {str(e)}")
 
     def _call_vision_api(self, image_contents: List[dict]) -> dict:
-        """调用视觉模型 API"""
+        """调用视觉模型 API（带重试机制）"""
+        return self._call_vision_api_with_retry(image_contents)
+
+    @_retry_with_backoff(max_retries=3, base_delay=1.0)
+    def _call_vision_api_with_retry(self, image_contents: List[dict]) -> dict:
+        """调用视觉模型 API（内部实现）"""
         url = f"{self.base_url}/v1/chat/completions"
 
         headers = {
@@ -444,10 +539,18 @@ class LocalAnalyzer:
         )
 
     def _detect_type(self, text: str) -> tuple:
-        """检测发票类型"""
+        """检测发票类型
+
+        检测顺序：酒店 > 打车 > 火车 > 飞机 > 餐饮
+        确保"酒店住宿"类文件不会被OTA平台词误判
+        """
         text_lower = text.lower()
 
-        for type_key, keywords in CATEGORY_KEYWORDS.items():
+        # 定义检测顺序和映射（酒店优先级最高）
+        type_order = ['hotel', 'taxi', 'train', 'flight', 'meal']
+
+        for type_key in type_order:
+            keywords = CATEGORY_KEYWORDS.get(type_key, [])
             for keyword in keywords:
                 if keyword in text or keyword.lower() in text_lower:
                     type_map = {
@@ -457,8 +560,7 @@ class LocalAnalyzer:
                         'hotel': ('hotel', '住宿'),
                         'meal': ('meal', '餐饮'),
                     }
-                    if type_key in type_map:
-                        return type_map[type_key]
+                    return type_map[type_key]
 
         return ('other', '其他')
 

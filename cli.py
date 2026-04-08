@@ -11,51 +11,13 @@ import argparse
 import sys
 from pathlib import Path
 from typing import List
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from app import get_api_key, setup_wizard, is_configured, INVOICE_CATEGORIES, PENDING_CATEGORY
 from app import analyze_invoice_vision, InvoiceInfo
 from app import FileOrganizer, generate_report
 from app.ocr import is_supported_file
-
-
-class Colors:
-    """终端颜色"""
-    HEADER = '\033[95m'
-    BLUE = '\033[94m'
-    CYAN = '\033[96m'
-    GREEN = '\033[92m'
-    YELLOW = '\033[93m'
-    RED = '\033[91m'
-    BOLD = '\033[1m'
-    END = '\033[0m'
-
-
-def color_print(text: str, color: str = ""):
-    """带颜色打印"""
-    print(f"{color}{text}{Colors.END}")
-
-
-def print_header(text: str):
-    """打印标题"""
-    print(f"\n{Colors.BOLD}{Colors.CYAN}{'='*60}{Colors.END}")
-    print(f"{Colors.BOLD}{Colors.CYAN}{text:^60}{Colors.END}")
-    print(f"{Colors.BOLD}{Colors.CYAN}{'='*60}{Colors.END}\n")
-
-
-def print_success(text: str):
-    color_print(f"✓ {text}", Colors.GREEN)
-
-
-def print_warning(text: str):
-    color_print(f"⚠ {text}", Colors.YELLOW)
-
-
-def print_error(text: str):
-    color_print(f"✗ {text}", Colors.RED)
-
-
-def print_info(text: str):
-    color_print(f"ℹ {text}", Colors.BLUE)
+from app.ui import print_header, print_success, print_warning, print_error, print_info
 
 
 def scan_files(input_dir: str) -> List[str]:
@@ -73,20 +35,19 @@ def scan_files(input_dir: str) -> List[str]:
     return sorted(files)
 
 
-def process_invoices(files: List[str], api_key: str, show_progress: bool = True) -> List[InvoiceInfo]:
-    """处理所有发票文件"""
-    results = []
+def process_invoices(files: List[str], api_key: str, show_progress: bool = True, max_workers: int = 5) -> List[InvoiceInfo]:
+    """处理所有发票文件（并发并行版本）"""
+    results = [None] * len(files)  # 预分配位置保持顺序
     total = len(files)
+    completed = 0
 
-    for idx, file_path in enumerate(files, 1):
+    def analyze_single(args):
+        """分析单个文件"""
+        idx, file_path = args
         filename = Path(file_path).name
-        if show_progress:
-            print_info(f"[{idx}/{total}] 分析: {filename}")
-
         try:
             info = analyze_invoice_vision(file_path, api_key)
         except Exception as e:
-            print_warning(f"分析失败: {e}")
             info = InvoiceInfo(
                 type="other",
                 subtype="未识别",
@@ -101,14 +62,28 @@ def process_invoices(files: List[str], api_key: str, show_progress: bool = True)
                 file_path=file_path,
                 order_number=""
             )
-        results.append(info)
+        return idx, filename, info
 
-        if show_progress:
-            category = INVOICE_CATEGORIES.get(info.type, "其他")
-            doc_type = "发票" if info.is_invoice else "凭证"
-            amount_str = f"¥{info.amount:.2f}" if info.amount > 0 else "金额未知"
-            date_str = info.service_date or info.date or "日期未知"
-            print_success(f"  → [{category}] {info.subtype or info.merchant} | {amount_str} | {date_str}")
+    if show_progress:
+        print_info(f"启动 {max_workers} 个并行线程处理 {total} 个文件...")
+
+    # 使用线程池并发处理
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # 提交所有任务
+        futures = {executor.submit(analyze_single, (idx, fp)): idx for idx, fp in enumerate(files)}
+
+        # 处理完成的任务
+        for future in as_completed(futures):
+            idx, filename, info = future.result()
+            results[idx] = info
+            completed += 1
+
+            if show_progress:
+                category = INVOICE_CATEGORIES.get(info.type, "其他")
+                doc_type = "发票" if info.is_invoice else "凭证"
+                amount_str = f"¥{info.amount:.2f}" if info.amount > 0 else "金额未知"
+                date_str = info.service_date or info.date or "日期未知"
+                print_success(f"[{completed}/{total}] [{category}] {info.subtype or info.merchant} | {amount_str} | {date_str}")
 
     return results
 
