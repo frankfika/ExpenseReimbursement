@@ -58,7 +58,8 @@ def generate_report(output_dir: str, invoices: list) -> str:
     wb.remove(wb.active)
     s = get_styles()
 
-    category_order = ['打车票', '火车飞机票', '住宿费', '餐费', '其他']
+    category_order = ['打车票', '火车飞机票', '住宿费', '餐费', '停车费', '加油费',
+                     '办公用品', '通讯费', '快递费', '医疗费用', '业务招待', '其他']
 
     # Group by category - only invoices (is_invoice=true)
     categories = {}
@@ -215,7 +216,8 @@ def generate_summary_report(output_dir: str, periods: list) -> str:
     output_path = Path(output_dir)
     wb = Workbook()
     s = get_styles()
-    category_order = ['打车票', '火车飞机票', '住宿费', '餐费', '其他']
+    category_order = ['打车票', '火车飞机票', '住宿费', '餐费', '停车费', '加油费',
+                     '办公用品', '通讯费', '快递费', '医疗费用', '业务招待', '其他']
 
     # --- Sheet 1: 总汇总 ---
     ws = wb.active
@@ -280,7 +282,7 @@ def generate_summary_report(output_dir: str, periods: list) -> str:
     ws2['A1'].font = s["title_font"]
     ws2['A1'].alignment = s["center"]
 
-    headers2 = ['报销周期', '打车票', '火车飞机票', '住宿费', '餐费', '其他']
+    headers2 = ['报销周期'] + category_order
     for col, header in enumerate(headers2, 1):
         cell = ws2.cell(row=3, column=col, value=header)
         cell.font = s["header_font_white"]

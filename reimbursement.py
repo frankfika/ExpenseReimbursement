@@ -46,7 +46,7 @@ def normalize_category(folder_name: str) -> str:
     name = re.sub(r'[-_].*$', '', name) if len(name) > 4 else name
     name = name.strip()
 
-    # 分类关键词映射
+    # 分类关键词映射（包含所有发票类型）
     category_keywords = {
         '打车': '打车票',
         '出租': '打车票',
@@ -62,6 +62,17 @@ def normalize_category(folder_name: str) -> str:
         '饮食': '餐费',
         '吃饭': '餐费',
         '外卖': '餐费',
+        '停车': '停车费',
+        '加油': '加油费',
+        '办公': '办公用品',
+        '文具': '办公用品',
+        '话费': '通讯费',
+        '电信': '通讯费',
+        '快递': '快递费',
+        '顺丰': '快递费',
+        '医院': '医疗费用',
+        '诊所': '医疗费用',
+        '招待': '业务招待',
     }
 
     for keyword, category in category_keywords.items():
@@ -69,7 +80,8 @@ def normalize_category(folder_name: str) -> str:
             return category
 
     # 如果已经是标准分类名，直接返回
-    standard_categories = ['打车票', '火车飞机票', '住宿费', '餐费', '其他', '待确认']
+    standard_categories = ['打车票', '火车飞机票', '住宿费', '餐费', '停车费', '加油费',
+                          '办公用品', '通讯费', '快递费', '医疗费用', '业务招待', '其他', '待确认']
     for cat in standard_categories:
         if cat in folder_name:
             return cat
@@ -194,12 +206,19 @@ def parse_filename(filename: str, file_path: str, category: str, parent_folder: 
                 merchant = part
                 break
 
-    # 类型映射
+    # 类型映射（包含所有发票类型）
     type_map = {
         '打车票': 'taxi',
         '火车飞机票': 'train',
         '住宿费': 'hotel',
         '餐费': 'meal',
+        '停车费': 'parking',
+        '加油费': 'fuel',
+        '办公用品': 'office',
+        '通讯费': 'telecom',
+        '快递费': 'express',
+        '医疗费用': 'medical',
+        '业务招待': 'entertainment',
         '其他': 'other',
         '待确认': 'other'
     }
@@ -240,6 +259,13 @@ def analyze_file_with_ai(file_path: str, category: str, api_key: str = None) -> 
             '火车飞机票': 'train',
             '住宿费': 'hotel',
             '餐费': 'meal',
+            '停车费': 'parking',
+            '加油费': 'fuel',
+            '办公用品': 'office',
+            '通讯费': 'telecom',
+            '快递费': 'express',
+            '医疗费用': 'medical',
+            '业务招待': 'entertainment',
             '其他': 'other',
             '待确认': 'other'
         }
@@ -313,7 +339,9 @@ def regenerate_report(args):
     print("=" * 50)
 
     total_amount = 0.0
-    for category_name in ['打车票', '火车飞机票', '住宿费', '餐费', '待确认', '其他']:
+    all_categories = ['打车票', '火车飞机票', '住宿费', '餐费', '停车费', '加油费',
+                     '办公用品', '通讯费', '快递费', '医疗费用', '业务招待', '待确认', '其他']
+    for category_name in all_categories:
         if category_name in categorized:
             infos = categorized[category_name]
             invoice_amount = sum(i.amount for i in infos if i.is_invoice)
@@ -496,7 +524,9 @@ def main():
     print("=" * 50)
 
     total_amount = 0.0
-    for category_name in ['打车票', '火车飞机票', '住宿费', '餐费', '其他']:
+    all_categories = ['打车票', '火车飞机票', '住宿费', '餐费', '停车费', '加油费',
+                     '办公用品', '通讯费', '快递费', '医疗费用', '业务招待', '其他']
+    for category_name in all_categories:
         if category_name in categorized:
             infos = categorized[category_name]
             invoice_amount = sum(i.amount for i in infos if i.is_invoice)

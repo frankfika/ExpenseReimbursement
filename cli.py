@@ -190,7 +190,10 @@ def main():
     total_amount = 0.0
     total_count = 0
 
-    for category_name in ['打车票', '火车飞机票', '住宿费', '餐费', '其他', PENDING_CATEGORY]:
+    # 包含所有发票类型的汇总
+    all_categories = ['打车票', '火车飞机票', '住宿费', '餐费', '停车费', '加油费',
+                     '办公用品', '通讯费', '快递费', '医疗费用', '业务招待', '其他', PENDING_CATEGORY]
+    for category_name in all_categories:
         if category_name in categorized:
             infos = categorized[category_name]
             invoices = [i for i in infos if i.is_invoice]
