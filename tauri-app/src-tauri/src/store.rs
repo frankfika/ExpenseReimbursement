@@ -29,7 +29,8 @@ impl Store {
         let backups_dir = config_dir.join("backups");
         fs::create_dir_all(&backups_dir)?;
 
-        let config = if config_path.exists() {
+        let already_exists = config_path.exists();
+        let config = if already_exists {
             let data = fs::read_to_string(&config_path)?;
             serde_json::from_str(&data).unwrap_or_default()
         } else {
@@ -43,8 +44,15 @@ impl Store {
             state: Mutex::new(config),
         };
 
+        // First-run setup: try migrating from .env, then ensure providers.json exists
+        if !already_exists {
             if store.state.lock().providers.is_empty() {
-            store.try_migrate_from_env();
+                store.try_migrate_from_env();
+            }
+            // Ensure file exists even if no migration happened
+            if !store.config_path.exists() {
+                let _ = store.persist();
+            }
         }
         Ok(store)
     }
@@ -140,10 +148,22 @@ impl Store {
     }
 
     pub fn try_migrate_from_env(&self) {
-        let env_paths: Vec<PathBuf> = vec![
+        let mut env_paths: Vec<PathBuf> = vec![
             std::env::current_dir().unwrap_or_default().join(".env"),
             self.config_dir.join(".env"),
         ];
+
+        // Also try the project's source dir relative to the executable.
+        // Useful when launched from the .app bundle where cwd is "/".
+        if let Ok(exe) = std::env::current_exe() {
+            // ../../../.env relative to executable (tauri-app/src-tauri/target/.../bin)
+            for ancestor in exe.ancestors().take(8) {
+                let candidate = ancestor.join(".env");
+                if candidate.exists() {
+                    env_paths.push(candidate);
+                }
+            }
+        }
 
         for env_path in &env_paths {
             if let Ok(content) = fs::read_to_string(env_path) {

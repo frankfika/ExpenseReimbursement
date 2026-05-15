@@ -43,3 +43,10 @@ releases/v*/
 tauri-app/node_modules/
 tauri-app/dist/
 tauri-app/src-tauri/target/
+
+# Playwright artifacts (testing only)
+.playwright-mcp/
+*-mode.png
+*-mode-final.png
+*-tab.png
+mobile-view.png
