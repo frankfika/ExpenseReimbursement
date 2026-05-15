@@ -16,6 +16,7 @@ import atexit
 from pathlib import Path
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, send_file, after_this_request
+from werkzeug.utils import secure_filename as _secure_filename
 
 # 导入核心模块
 from app import INVOICE_CATEGORIES, is_configured, setup_wizard
@@ -290,6 +291,31 @@ def index():
     return render_template('index.html', configured=configured)
 
 
+@app.route('/scan-folder', methods=['POST'])
+def scan_folder():
+    """扫描文件夹返回支持的文件列表（Tauri 桌面版使用）"""
+    data = request.get_json()
+    folder_path = data.get('path', '')
+    if not folder_path or not os.path.isdir(folder_path):
+        return jsonify({'error': '无效的文件夹路径'}), 400
+
+    # 安全限制：只允许扫描用户主目录下的路径
+    real_path = os.path.realpath(folder_path)
+    home_dir = os.path.realpath(os.path.expanduser('~'))
+    if not real_path.startswith(home_dir):
+        return jsonify({'error': '只允许扫描用户目录下的文件夹'}), 403
+
+    supported_ext = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp', '.pdf'}
+    files = []
+    for root, dirs, filenames in os.walk(folder_path):
+        for filename in filenames:
+            ext = os.path.splitext(filename)[1].lower()
+            if ext in supported_ext:
+                files.append(os.path.join(root, filename))
+
+    return jsonify({'files': files, 'count': len(files)})
+
+
 @app.route('/settings')
 def settings():
     """设置页面"""
@@ -318,6 +344,14 @@ def save_settings():
         return jsonify({'success': True, 'message': '配置已保存'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/reload-config', methods=['POST'])
+def reload_config_endpoint():
+    """重新加载配置（Tauri 切换 provider 后调用）"""
+    from app.config import reload_config
+    reload_config()
+    return jsonify({'success': True})
 
 
 @app.route('/privacy')
@@ -357,9 +391,7 @@ def upload():
     seen_filenames = set()
     for file in files:
         if file and file.filename and allowed_file(file.filename):
-            # 使用安全的文件名（去除路径）
-            filename = os.path.basename(file.filename)
-            # 避免空文件名
+            filename = _secure_filename(file.filename) or os.path.basename(file.filename)
             if not filename:
                 continue
             # 处理同名文件：添加序号

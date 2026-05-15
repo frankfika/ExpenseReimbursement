@@ -1,6 +1,5 @@
 paddlepaddle
 paddleocr
-pdf2image
 Pillow
 openpyxl
 requests
@@ -8,6 +7,8 @@ python-dotenv
 PyMuPDF
 flask>=2.3.0
 pywebview>=4.0
+
+# 构建依赖
 pyinstaller>=5.0
 
 # 测试依赖

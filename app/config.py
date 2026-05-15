@@ -5,11 +5,12 @@ from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
 
+from .store import get_active_provider
+
 
 def get_config_dir() -> Path:
     """获取配置目录（支持打包环境）"""
     if getattr(sys, 'frozen', False):
-        # PyInstaller 打包环境 - 使用用户目录
         if sys.platform == 'darwin':
             config_dir = Path.home() / 'Library' / 'Application Support' / 'ExpenseHelper'
         elif sys.platform == 'win32':
@@ -19,7 +20,6 @@ def get_config_dir() -> Path:
         config_dir.mkdir(parents=True, exist_ok=True)
         return config_dir
     else:
-        # 开发环境 - 使用项目根目录（app 的父目录）
         return Path(__file__).parent.parent
 
 
@@ -30,22 +30,61 @@ ENV_FILE = CONFIG_DIR / ".env"
 # 加载 .env 文件
 load_dotenv(ENV_FILE)
 
-# API 配置（支持硅基流动 SiliconFlow）
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
-DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.siliconflow.cn")
-DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-ai/DeepSeek-V3")
 
-# 视觉模型配置（用于直接分析图片，无需本地 OCR）
-VISION_MODEL = os.getenv("VISION_MODEL", "Qwen/Qwen2.5-VL-7B-Instruct")
-# 可选视觉模型：
-# - Qwen/Qwen2.5-VL-7B-Instruct （推荐，免费额度多）
-# - Pro/Qwen/Qwen2-VL-7B-Instruct
-# - deepseek-ai/deepseek-vl2 （如果可用）
+def _resolve_config():
+    """从 providers.json 或 .env 解析当前配置"""
+    # 环境变量最高优先级（CI/CD 场景）
+    env_key = os.environ.get("DEEPSEEK_API_KEY", "")
+    if env_key and env_key != "your_api_key_here":
+        return {
+            "api_key": env_key,
+            "base_url": os.environ.get("DEEPSEEK_BASE_URL", "https://api.siliconflow.cn"),
+            "text_model": os.environ.get("DEEPSEEK_MODEL", "deepseek-ai/DeepSeek-V3"),
+            "vision_model": os.environ.get("VISION_MODEL", "Qwen/Qwen2.5-VL-7B-Instruct"),
+        }
+
+    # providers.json 次优先
+    provider = get_active_provider()
+    if provider and provider.get("api_key"):
+        return {
+            "api_key": provider["api_key"],
+            "base_url": provider.get("base_url", "https://api.siliconflow.cn"),
+            "text_model": provider.get("text_model", "deepseek-ai/DeepSeek-V3"),
+            "vision_model": provider.get("vision_model", "Qwen/Qwen2.5-VL-7B-Instruct"),
+        }
+
+    # .env fallback
+    dotenv_key = os.getenv("DEEPSEEK_API_KEY", "")
+    return {
+        "api_key": dotenv_key if dotenv_key != "your_api_key_here" else "",
+        "base_url": os.getenv("DEEPSEEK_BASE_URL", "https://api.siliconflow.cn"),
+        "text_model": os.getenv("DEEPSEEK_MODEL", "deepseek-ai/DeepSeek-V3"),
+        "vision_model": os.getenv("VISION_MODEL", "Qwen/Qwen2.5-VL-7B-Instruct"),
+    }
+
+
+_cached_config = _resolve_config()
+
+# API 配置（向后兼容的全局变量）
+DEEPSEEK_API_KEY = _cached_config["api_key"]
+DEEPSEEK_BASE_URL = _cached_config["base_url"]
+DEEPSEEK_MODEL = _cached_config["text_model"]
+VISION_MODEL = _cached_config["vision_model"]
 
 
 def is_configured() -> bool:
     """检查是否已配置 API Key"""
     return bool(DEEPSEEK_API_KEY and DEEPSEEK_API_KEY != "your_api_key_here")
+
+
+def reload_config() -> None:
+    """重新从 providers.json / .env 加载配置（Tauri 切换 provider 后调用）"""
+    global DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, DEEPSEEK_MODEL, VISION_MODEL, _cached_config
+    _cached_config = _resolve_config()
+    DEEPSEEK_API_KEY = _cached_config["api_key"]
+    DEEPSEEK_BASE_URL = _cached_config["base_url"]
+    DEEPSEEK_MODEL = _cached_config["text_model"]
+    VISION_MODEL = _cached_config["vision_model"]
 
 
 def save_config(api_key: str, base_url: str = None, model: str = None) -> None:
