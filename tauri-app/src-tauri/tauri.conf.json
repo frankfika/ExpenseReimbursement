@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "报销助手",
+  "productName": "ExpenseHelper",
   "version": "2.0.0",
   "identifier": "com.frankfika.expensehelper",
   "build": {

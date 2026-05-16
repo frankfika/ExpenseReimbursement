@@ -63,11 +63,11 @@ jobs:
             echo ""
             echo "| 平台 | 文件 | 说明 |"
             echo "|------|------|------|"
-            echo "| macOS (Apple Silicon) | \`报销助手_${VERSION}_aarch64.dmg\` | M1/M2/M3 芯片 |"
-            echo "| macOS (Intel) | \`报销助手_${VERSION}_x64.dmg\` | Intel 芯片 |"
-            echo "| Windows | \`报销助手_${VERSION}_x64-setup.exe\` 或 \`.msi\` | x64 系统 |"
+            echo "| macOS (Apple Silicon) | \`ExpenseHelper_${VERSION}_aarch64.dmg\` | M1/M2/M3 芯片 |"
+            echo "| macOS (Intel) | \`ExpenseHelper_${VERSION}_x64.dmg\` | Intel 芯片 |"
+            echo "| Windows | \`ExpenseHelper_${VERSION}_x64-setup.exe\` | x64 系统 |"
             echo ""
-            echo "> macOS 首次打开如提示\"已损坏\"，在终端执行 \`xattr -cr /Applications/报销助手.app\` 即可。"
+            echo "> macOS 首次打开如提示\"已损坏\"，在终端执行 \`xattr -cr /Applications/ExpenseHelper.app\` 即可。"
             echo ""
             echo "### 更新内容"
             echo ""
@@ -112,7 +112,7 @@ jobs:
             args: --target x86_64-apple-darwin
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
-            args: ''
+            args: --bundles nsis
 
     runs-on: ${{ matrix.platform }}
     steps:
