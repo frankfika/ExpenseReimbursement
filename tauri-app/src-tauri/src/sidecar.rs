@@ -19,11 +19,11 @@ impl Sidecar {
         }
     }
 
-    pub fn start(&self, project_root: &str) -> Result<u16> {
+    pub fn start(&self, python_cmd: &str, project_root: &str) -> Result<u16> {
         let port = find_free_port(5100).context("no free port")?;
         SIDECAR_PORT.store(port, Ordering::SeqCst);
 
-        let child = Command::new("python3")
+        let child = Command::new(python_cmd)
             .args([
                 "-c",
                 &format!(
@@ -32,7 +32,7 @@ impl Sidecar {
                 ),
             ])
             .spawn()
-            .context("failed to spawn python3 sidecar")?;
+            .context(format!("failed to spawn {} sidecar", python_cmd))?;
 
         *self.process.lock() = Some(child);
 

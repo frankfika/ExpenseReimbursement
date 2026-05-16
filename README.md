@@ -7,7 +7,7 @@
 
 ### 扔进去 → 等一下 → 拿结果 · 让报销从此告别繁琐
 
-![Version](https://img.shields.io/badge/Version-1.3.0-blue?style=flat-square)
+![Version](https://img.shields.io/badge/Version-2.0.1-blue?style=flat-square)
 ![Platform](https://img.shields.io/badge/Platform-macOS|Windows|Web|Claude_Code-green?style=flat-square)
 ![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-lightgrey?style=flat-square)
@@ -158,17 +158,24 @@ cp -r claude-skill ~/.claude/skills/expense-reimbursement
 
 ### 方式一：Releases 下载（推荐）
 
-无需安装 Python，开箱即用！
+体积小（4–6 MB），基于 Tauri v2 构建。
 
-1. 访问 [Releases 页面](https://github.com/frankfika/ExpenseReimbursement/releases)
+> **前置依赖**：发票识别功能需要系统已安装 Python 3.9+ 及项目依赖。首次使用请在项目目录运行 `pip install -r requirements.txt`。
+
+1. 访问 [Releases 页面](https://github.com/frankfika/ExpenseReimbursement/releases/latest)
 2. 下载对应平台安装包：
 
 | 平台 | 文件名 | 大小 | 下载 |
 |------|--------|------|------|
-| 🍎 macOS | `报销助手-1.2.0.dmg` | ~300 MB | [下载](https://github.com/frankfika/ExpenseReimbursement/releases/download/v1.2.0/报销助手-1.2.0.dmg) |
-| 🪟 Windows | `ExpenseHelper-1.2.0-windows.exe` | ~150 MB | [下载](https://github.com/frankfika/ExpenseReimbursement/releases/download/v1.2.0/ExpenseHelper-1.2.0-windows.exe) |
+| 🍎 macOS (Apple Silicon) | `ExpenseHelper_2.0.1_aarch64.dmg` | ~6 MB | [下载](https://github.com/frankfika/ExpenseReimbursement/releases/download/v2.0.1/ExpenseHelper_2.0.1_aarch64.dmg) |
+| 🍎 macOS (Intel) | `ExpenseHelper_2.0.1_x64.dmg` | ~6 MB | [下载](https://github.com/frankfika/ExpenseReimbursement/releases/download/v2.0.1/ExpenseHelper_2.0.1_x64.dmg) |
+| 🪟 Windows (x64) | `ExpenseHelper_2.0.1_x64-setup.exe` | ~4 MB | [下载](https://github.com/frankfika/ExpenseReimbursement/releases/download/v2.0.1/ExpenseHelper_2.0.1_x64-setup.exe) |
 
-3. 安装并运行，首次会引导配置 API Key
+3. 安装并运行，进入设置配置 Provider 和 API Key
+
+> **macOS 用户**：未做代码签名，首次打开如提示「已损坏」，在终端执行 `xattr -cr /Applications/ExpenseHelper.app` 即可。
+>
+> **Windows 用户**：未做代码签名，SmartScreen 警告时点击「更多信息 → 仍要运行」即可。
 
 ### 方式二：Claude Code Skill（零配置）
 
@@ -308,23 +315,35 @@ ExpenseReimbursement/
 
 ## 版本演进
 
-### v1.3.0 (2025-03)
+### v2.0.1 (2026-05)
+- 🐛 修复 Tauri 应用无法找到 Python 后端的问题（sidecar 路径改为从 resource_dir 解析）
+- 🐛 修复 Windows MSI 打包失败（切换到 NSIS）
+- 🐛 修复 GitHub Release asset 中文文件名被截断（产物名改为英文）
+- 📝 README 增加 Python 依赖说明
+
+### v2.0.0 (2026-05)
+- 桌面版重写为 Tauri v2 + React + Rust，安装包体积从 150-300 MB 降到 4-6 MB
+- 多 Provider 配置管理（一键切换 SiliconFlow / 自托管模型 / 其他兼容 OpenAI 协议的服务）
+- macOS 提供 Apple Silicon (aarch64) + Intel (x64) 双架构 DMG
+- 旧 PyInstaller 桌面入口（`desktop_app.py`）保留为可选源码运行方式
+
+### v1.3.0 (2026-03)
 - 🤖 新增 Claude Code Skill，支持对话式报销整理
 - ✨ 利用 Claude 原生视觉能力，无需外部 API
 - 📦 零配置安装，仅需 openpyxl 依赖
 
-### v1.2.0 (2024-02)
+### v1.2.0 (2026-02)
 - ✨ 新增智能配对功能
 - ✨ 中英双语界面支持
 - 🐛 优化识别准确率
 - 💄 改进 UI 体验
 
-### v1.1.0 (2024-01)
+### v1.1.0 (2026-01)
 - ✨ 支持 PDF 发票识别
 - ✨ 添加网页版界面
 - 🐛 修复构建流水线
 
-### v1.0.0 (2024-01)
+### v1.0.0 (2026-01)
 - 🎉 首次发布
 - ✨ 支持发票识别、自动分类
 - ✨ 支持桌面版、命令行版
@@ -393,16 +412,17 @@ git push origin feature/your-feature
 ### 版本发布
 
 ```bash
-# 1. 更新版本号
-echo '1.3.0' > VERSION
+# 1. 更新 Tauri 版本号
+# 编辑 tauri-app/src-tauri/tauri.conf.json 和 Cargo.toml
+# 把 version 改成新版本
 
 # 2. 提交并打 tag
-git add VERSION
-git commit -m "bump: v1.3.0"
-git tag v1.3.0
+git commit -am "release: v2.x.x"
+git tag v2.x.x
 git push origin main --tags
 
-# 3. GitHub Actions 自动构建 Release
+# 3. GitHub Actions 自动构建并发布 Release
+#    （macOS aarch64/x64 + Windows x64）
 ```
 
 ## 鸣谢
