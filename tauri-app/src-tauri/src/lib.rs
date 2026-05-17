@@ -46,6 +46,7 @@ pub fn run() {
             commands::check_python_env,
             commands::install_python_deps,
             commands::use_system_python,
+            commands::auto_install_python,
             sidecar_commands::start_sidecar,
             sidecar_commands::get_sidecar_port,
             sidecar_commands::stop_sidecar,

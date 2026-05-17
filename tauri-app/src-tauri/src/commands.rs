@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, State};
 
 use crate::providers::{Provider, UiPrefs, PRESETS};
-use crate::setup::{check_environment, check_missing_packages, setup_venv, EnvStatus};
+use crate::setup::{check_environment, check_missing_packages, setup_venv, EnvStatus, can_auto_install};
 use crate::store::Store;
 
 #[derive(Debug, Serialize)]
@@ -206,6 +206,8 @@ pub fn check_python_env(app_handle: AppHandle, store: State<'_, Store>) -> Resul
                 python_path: path.clone(),
                 packages_ready: missing.is_empty(),
                 missing_packages: missing,
+                can_auto_install: false,
+                install_cmd: String::new(),
             });
         }
     }
@@ -226,4 +228,49 @@ pub fn use_system_python(store: State<'_, Store>, path: String) -> Result<(), St
     store.set_python_path(path).map_err(|e| e.to_string())?;
     store.set_env_ready(true).map_err(|e| e.to_string())?;
     Ok(())
+}
+
+#[tauri::command]
+pub fn auto_install_python(store: State<'_, Store>) -> Result<String, String> {
+    if !can_auto_install() {
+        return Err("当前系统不支持自动安装 Python".to_string());
+    }
+
+    let cmd = if cfg!(target_os = "macos") {
+        "brew install python3"
+    } else if cfg!(target_os = "linux") {
+        use std::process::Command;
+        if Command::new("apt-get").arg("--version").output().is_ok() {
+            "sudo apt-get update && sudo apt-get install -y python3 python3-venv python3-pip"
+        } else if Command::new("dnf").arg("--version").output().is_ok() {
+            "sudo dnf install -y python3 python3-pip"
+        } else if Command::new("pacman").arg("--version").output().is_ok() {
+            "sudo pacman -S --noconfirm python python-pip"
+        } else {
+            return Err("无法识别 Linux 包管理器".to_string());
+        }
+    } else {
+        return Err("Windows 暂不支持自动安装".to_string());
+    };
+
+    let output = std::process::Command::new("sh")
+        .arg("-c")
+        .arg(cmd)
+        .output()
+        .map_err(|e| format!("安装命令执行失败: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Python 安装失败:\n{}", stderr));
+    }
+
+    // After installation, try to find python again
+    let found = crate::setup::find_python_cmd();
+    if let Some(path) = found {
+        store.set_python_path(path.clone()).map_err(|e| e.to_string())?;
+        store.set_env_ready(true).map_err(|e| e.to_string())?;
+        Ok(path)
+    } else {
+        Err("安装后仍无法找到 Python，请手动重启应用".to_string())
+    }
 }

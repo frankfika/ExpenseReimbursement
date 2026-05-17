@@ -7,6 +7,8 @@ interface EnvStatus {
   python_path: string;
   packages_ready: boolean;
   missing_packages: string[];
+  can_auto_install: boolean;
+  install_cmd: string;
 }
 
 export function SetupWizard({ onReady }: { onReady: () => void }) {
@@ -58,6 +60,20 @@ export function SetupWizard({ onReady }: { onReady: () => void }) {
       onReady();
     } catch (e) {
       setError(String(e));
+    }
+  };
+
+  const autoInstall = async () => {
+    setInstalling(true);
+    setInstallLog("正在自动安装 Python，请稍候...");
+    setError(null);
+    try {
+      const path: string = await invoke("auto_install_python");
+      setInstallLog(`Python 安装完成: ${path}`);
+      setTimeout(() => onReady(), 800);
+    } catch (e) {
+      setError(String(e));
+      setInstalling(false);
     }
   };
 
@@ -136,17 +152,40 @@ export function SetupWizard({ onReady }: { onReady: () => void }) {
             <span>未检测到 Python</span>
           </div>
           <p className="text-xs text-surface-500">
-            请安装 Python 3.9+ 后重新打开应用。
+            已扩大搜索范围（PATH、Homebrew、pyenv、conda、常见安装目录），仍未找到 Python 3.9+。
           </p>
-          <div className="space-y-1.5 text-xs text-surface-400">
-            <p><span className="text-surface-500">macOS:</span> brew install python3</p>
-            <p className="flex items-center gap-1">
-              <span className="text-surface-500">Windows:</span>
-              <a href="https://python.org/downloads" target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 text-brand-400 hover:text-brand-300">
-                python.org/downloads <ExternalLink size={10} />
-              </a>
-            </p>
-          </div>
+
+          {status?.can_auto_install ? (
+            <>
+              <div className="rounded-xl bg-brand-600/5 p-3 text-xs text-brand-300 ring-1 ring-brand-500/20">
+                <p className="mb-1.5 font-medium">检测到你的系统支持自动安装</p>
+                <code className="block rounded-md bg-surface-800 px-2 py-1.5 text-[11px] text-surface-400 font-mono">
+                  {status.install_cmd}
+                </code>
+              </div>
+              {!installing ? (
+                <button className="btn-primary text-xs w-full" onClick={autoInstall}>
+                  <Download size={14} /> 自动安装 Python
+                </button>
+              ) : (
+                <div className="flex items-center gap-2 text-xs text-surface-500">
+                  <Loader2 size={14} className="animate-spin text-brand-500" />
+                  {installLog}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="space-y-1.5 text-xs text-surface-400">
+              <p><span className="text-surface-500">macOS:</span> brew install python3</p>
+              <p className="flex items-center gap-1">
+                <span className="text-surface-500">Windows:</span>
+                <a href="https://python.org/downloads" target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 text-brand-400 hover:text-brand-300">
+                  python.org/downloads <ExternalLink size={10} />
+                </a>
+              </p>
+              <p><span className="text-surface-500">Linux:</span> sudo apt-get install python3 python3-pip</p>
+            </div>
+          )}
           <button className="btn-secondary text-xs w-full" onClick={checkEnv}>
             重新检测
           </button>
