@@ -1,5 +1,6 @@
 use tauri::{AppHandle, Manager, State};
 use crate::sidecar::Sidecar;
+use crate::store::Store;
 
 fn resolve_project_root(app_handle: &AppHandle) -> Result<std::path::PathBuf, String> {
     // 1. Try bundled resources first (release builds)
@@ -24,26 +25,36 @@ fn resolve_project_root(app_handle: &AppHandle) -> Result<std::path::PathBuf, St
 }
 
 #[tauri::command]
-pub fn start_sidecar(app_handle: AppHandle, sidecar: State<'_, Sidecar>) -> Result<u16, String> {
+pub fn start_sidecar(
+    app_handle: AppHandle,
+    sidecar: State<'_, Sidecar>,
+    store: State<'_, Store>,
+) -> Result<u16, String> {
     let project_root = resolve_project_root(&app_handle)?;
     let project_root_str = project_root.to_str().unwrap_or(".");
 
-    // Pre-flight: check python3 / python availability
-    let python_cmd = if std::process::Command::new("python3").arg("--version").output().is_ok() {
-        "python3"
-    } else if std::process::Command::new("python").arg("--version").output().is_ok() {
-        "python"
+    // Use configured python path if available
+    let python_cmd = store.get_python_path();
+    let python_cmd = if !python_cmd.is_empty() {
+        python_cmd
     } else {
-        return Err(
-            "未检测到 Python。报销助手的识别功能依赖 Python 后端。\n\
-             请安装 Python 3.9+ 并确保 `python3` 或 `python` 命令可用。\n\
-             macOS: brew install python3\n\
-             Windows: https://python.org/downloads".to_string()
-        );
+        // Fallback: auto-detect
+        if std::process::Command::new("python3").arg("--version").output().is_ok() {
+            "python3".to_string()
+        } else if std::process::Command::new("python").arg("--version").output().is_ok() {
+            "python".to_string()
+        } else {
+            return Err(
+                "未检测到 Python。报销助手的识别功能依赖 Python 后端。\n\
+                 请安装 Python 3.9+ 并确保 `python3` 或 `python` 命令可用。\n\
+                 macOS: brew install python3\n\
+                 Windows: https://python.org/downloads".to_string()
+            );
+        }
     };
 
     // Pre-flight: check required packages
-    let check = std::process::Command::new(python_cmd)
+    let check = std::process::Command::new(&python_cmd)
         .args([
             "-c",
             "import flask, paddle, openpyxl",
@@ -54,7 +65,7 @@ pub fn start_sidecar(app_handle: AppHandle, sidecar: State<'_, Sidecar>) -> Resu
         if !out.status.success() {
             let stderr = String::from_utf8_lossy(&out.stderr);
             return Err(format!(
-                "Python 依赖缺失。请在项目根目录运行:\n\
+                "Python 依赖缺失。请在设置中完成环境安装，或在项目根目录运行:\n\
                  pip install -r requirements.txt\n\n\
                  详情: {}",
                 stderr
@@ -62,7 +73,7 @@ pub fn start_sidecar(app_handle: AppHandle, sidecar: State<'_, Sidecar>) -> Resu
         }
     }
 
-    sidecar.start(python_cmd, project_root_str).map_err(|e| e.to_string())
+    sidecar.start(&python_cmd, project_root_str).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

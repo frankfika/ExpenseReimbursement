@@ -128,6 +128,28 @@ impl Store {
         self.persist()
     }
 
+    pub fn get_python_path(&self) -> String {
+        self.state.lock().python_path.clone()
+    }
+
+    pub fn set_python_path(&self, path: String) -> Result<()> {
+        let mut cfg = self.state.lock();
+        cfg.python_path = path;
+        drop(cfg);
+        self.persist()
+    }
+
+    pub fn is_env_ready(&self) -> bool {
+        self.state.lock().env_ready
+    }
+
+    pub fn set_env_ready(&self, ready: bool) -> Result<()> {
+        let mut cfg = self.state.lock();
+        cfg.env_ready = ready;
+        drop(cfg);
+        self.persist()
+    }
+
     pub fn list_backups(&self) -> Result<Vec<String>> {
         let mut entries: Vec<String> = fs::read_dir(&self.backups_dir)?
             .filter_map(|e| e.ok())

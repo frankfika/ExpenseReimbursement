@@ -1,5 +1,6 @@
 mod commands;
 mod providers;
+mod setup;
 mod sidecar;
 mod sidecar_commands;
 mod store;
@@ -35,6 +36,9 @@ pub fn run() {
             commands::list_backups,
             commands::restore_backup,
             commands::test_provider,
+            commands::check_python_env,
+            commands::install_python_deps,
+            commands::use_system_python,
             sidecar_commands::start_sidecar,
             sidecar_commands::get_sidecar_port,
             sidecar_commands::stop_sidecar,

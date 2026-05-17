@@ -53,6 +53,10 @@ pub struct ProvidersConfig {
     pub providers: Vec<Provider>,
     #[serde(default)]
     pub ui: UiPrefs,
+    #[serde(default)]
+    pub python_path: String,
+    #[serde(default)]
+    pub env_ready: bool,
 }
 
 fn default_version() -> u32 {
@@ -66,6 +70,8 @@ impl Default for ProvidersConfig {
             active_id: String::new(),
             providers: Vec::new(),
             ui: UiPrefs::default(),
+            python_path: String::new(),
+            env_ready: false,
         }
     }
 }

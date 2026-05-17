@@ -7,7 +7,7 @@
 
 ### 扔进去 → 等一下 → 拿结果 · 让报销从此告别繁琐
 
-![Version](https://img.shields.io/badge/Version-2.0.1-blue?style=flat-square)
+![Version](https://img.shields.io/badge/Version-2.0.2-blue?style=flat-square)
 ![Platform](https://img.shields.io/badge/Platform-macOS|Windows|Web|Claude_Code-green?style=flat-square)
 ![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-lightgrey?style=flat-square)
@@ -160,16 +160,16 @@ cp -r claude-skill ~/.claude/skills/expense-reimbursement
 
 体积小（4–6 MB），基于 Tauri v2 构建。
 
-> **前置依赖**：发票识别功能需要系统已安装 Python 3.9+ 及项目依赖。首次使用请在项目目录运行 `pip install -r requirements.txt`。
+> **前置依赖**：发票识别功能需要系统已安装 Python 3.9+。首次打开应用会自动检测并引导安装 Python 依赖，无需手动运行命令。
 
 1. 访问 [Releases 页面](https://github.com/frankfika/ExpenseReimbursement/releases/latest)
 2. 下载对应平台安装包：
 
 | 平台 | 文件名 | 大小 | 下载 |
 |------|--------|------|------|
-| 🍎 macOS (Apple Silicon) | `ExpenseHelper_2.0.1_aarch64.dmg` | ~6 MB | [下载](https://github.com/frankfika/ExpenseReimbursement/releases/download/v2.0.1/ExpenseHelper_2.0.1_aarch64.dmg) |
-| 🍎 macOS (Intel) | `ExpenseHelper_2.0.1_x64.dmg` | ~6 MB | [下载](https://github.com/frankfika/ExpenseReimbursement/releases/download/v2.0.1/ExpenseHelper_2.0.1_x64.dmg) |
-| 🪟 Windows (x64) | `ExpenseHelper_2.0.1_x64-setup.exe` | ~4 MB | [下载](https://github.com/frankfika/ExpenseReimbursement/releases/download/v2.0.1/ExpenseHelper_2.0.1_x64-setup.exe) |
+| 🍎 macOS (Apple Silicon) | `ExpenseHelper_2.0.2_aarch64.dmg` | ~6 MB | [下载](https://github.com/frankfika/ExpenseReimbursement/releases/download/v2.0.2/ExpenseHelper_2.0.2_aarch64.dmg) |
+| 🍎 macOS (Intel) | `ExpenseHelper_2.0.2_x64.dmg` | ~6 MB | [下载](https://github.com/frankfika/ExpenseReimbursement/releases/download/v2.0.2/ExpenseHelper_2.0.2_x64.dmg) |
+| 🪟 Windows (x64) | `ExpenseHelper_2.0.2_x64-setup.exe` | ~4 MB | [下载](https://github.com/frankfika/ExpenseReimbursement/releases/download/v2.0.2/ExpenseHelper_2.0.2_x64-setup.exe) |
 
 3. 安装并运行，进入设置配置 Provider 和 API Key
 
@@ -315,11 +315,11 @@ ExpenseReimbursement/
 
 ## 版本演进
 
-### v2.0.1 (2026-05)
+### v2.0.2 (2026-05)
+- ✨ 新增首次启动环境配置向导：自动检测 Python，一键创建虚拟环境并安装依赖
 - 🐛 修复 Tauri 应用无法找到 Python 后端的问题（sidecar 路径改为从 resource_dir 解析）
 - 🐛 修复 Windows MSI 打包失败（切换到 NSIS）
 - 🐛 修复 GitHub Release asset 中文文件名被截断（产物名改为英文）
-- 📝 README 增加 Python 依赖说明
 
 ### v2.0.0 (2026-05)
 - 桌面版重写为 Tauri v2 + React + Rust，安装包体积从 150-300 MB 降到 4-6 MB

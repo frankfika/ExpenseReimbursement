@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
-use tauri::State;
+use tauri::{AppHandle, State};
 
 use crate::providers::{Provider, UiPrefs, PRESETS};
+use crate::setup::{check_environment, check_missing_packages, setup_venv, EnvStatus};
 use crate::store::Store;
 
 #[derive(Debug, Serialize)]
@@ -190,4 +191,39 @@ pub async fn test_provider(store: State<'_, Store>, id: String) -> Result<String
     } else {
         Err(format!("HTTP {}: {}", resp.status(), resp.status().canonical_reason().unwrap_or("")))
     }
+}
+
+#[tauri::command]
+pub fn check_python_env(app_handle: AppHandle, store: State<'_, Store>) -> Result<EnvStatus, String> {
+    // If already configured and ready, return stored path
+    if store.is_env_ready() {
+        let path = store.get_python_path();
+        if !path.is_empty() {
+            let missing = check_missing_packages(&path, &["flask", "paddle", "openpyxl"])
+                .map_err(|e| e.to_string())?;
+            return Ok(EnvStatus {
+                python_found: true,
+                python_path: path.clone(),
+                packages_ready: missing.is_empty(),
+                missing_packages: missing,
+            });
+        }
+    }
+
+    check_environment(&app_handle).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn install_python_deps(app_handle: AppHandle, store: State<'_, Store>) -> Result<String, String> {
+    let venv_python = setup_venv(&app_handle).map_err(|e| e.to_string())?;
+    store.set_python_path(venv_python.clone()).map_err(|e| e.to_string())?;
+    store.set_env_ready(true).map_err(|e| e.to_string())?;
+    Ok(venv_python)
+}
+
+#[tauri::command]
+pub fn use_system_python(store: State<'_, Store>, path: String) -> Result<(), String> {
+    store.set_python_path(path).map_err(|e| e.to_string())?;
+    store.set_env_ready(true).map_err(|e| e.to_string())?;
+    Ok(())
 }
