@@ -1,13 +1,28 @@
 import { useState, useEffect } from "react";
 import { invoke } from "../lib/tauri";
-import { Sun, Moon, Monitor, RotateCcw, Clock } from "lucide-react";
+import { Sun, Moon, Monitor, RotateCcw, Clock, Download, Loader2 } from "lucide-react";
 import type { UiPrefs } from "../types/provider";
 import { useToastContext } from "../context/ToastContext";
+
+const CURRENT_VERSION = "2.0.3";
+
+function compareVersions(a: string, b: string): number {
+  const pa = a.replace(/^v/, "").split(".").map(Number);
+  const pb = b.replace(/^v/, "").split(".").map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const na = pa[i] || 0;
+    const nb = pb[i] || 0;
+    if (na > nb) return 1;
+    if (na < nb) return -1;
+  }
+  return 0;
+}
 
 export function SettingsPanel() {
   const [theme, setTheme] = useState<string>("system");
   const [backups, setBackups] = useState<string[]>([]);
   const [restoring, setRestoring] = useState(false);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
   const toast = useToastContext();
 
   useEffect(() => {
@@ -66,6 +81,41 @@ export function SettingsPanel() {
     { id: "system", label: "跟随系统", icon: Monitor },
   ];
 
+  const checkUpdate = async () => {
+    setCheckingUpdate(true);
+    try {
+      const resp = await fetch(
+        "https://api.github.com/repos/frankfika/ExpenseReimbursement/releases/latest",
+        { headers: { Accept: "application/vnd.github+json" } }
+      );
+      if (!resp.ok) {
+        toast.error("检查更新失败，请稍后重试");
+        return;
+      }
+      const data = await resp.json();
+      const latest = (data.tag_name || "").replace(/^v/, "");
+      if (!latest) {
+        toast.error("无法解析最新版本号");
+        return;
+      }
+      if (compareVersions(latest, CURRENT_VERSION) > 0) {
+        toast.success(`发现新版本 v${latest}，即将打开下载页面`);
+        setTimeout(() => {
+          window.open(
+            "https://github.com/frankfika/ExpenseReimbursement/releases/latest",
+            "_blank"
+          );
+        }, 1500);
+      } else {
+        toast.info("当前已是最新版本");
+      }
+    } catch {
+      toast.error("检查更新失败，请检查网络连接");
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <div>
@@ -82,6 +132,29 @@ export function SettingsPanel() {
               <span className="text-xs text-surface-300">{t.label}</span>
             </button>
           ))}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-surface-100 mb-1">关于</h2>
+        <p className="text-xs text-surface-500 mb-4">版本信息与更新检查</p>
+        <div className="card flex items-center justify-between p-4">
+          <div>
+            <p className="text-sm text-surface-300">报销助手</p>
+            <p className="text-[11px] text-surface-500">v{CURRENT_VERSION} · Tauri Edition</p>
+          </div>
+          <button
+            className="btn-secondary py-1.5 px-3 text-[11px]"
+            onClick={checkUpdate}
+            disabled={checkingUpdate}
+          >
+            {checkingUpdate ? (
+              <Loader2 size={11} className="animate-spin" />
+            ) : (
+              <Download size={11} />
+            )}
+            检查更新
+          </button>
         </div>
       </div>
 
