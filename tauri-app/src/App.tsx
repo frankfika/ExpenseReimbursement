@@ -7,6 +7,7 @@ import { SetupWizard } from "./components/SetupWizard";
 import { ToastContainer } from "./components/ToastContainer";
 import { ToastProvider, useToastContext } from "./context/ToastContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ShortcutHelp } from "./components/ShortcutHelp";
 import { invoke } from "./lib/tauri";
 
 type Tab = "providers" | "upload" | "settings";
@@ -14,6 +15,7 @@ type Tab = "providers" | "upload" | "settings";
 function AppContent() {
   const [tab, setTab] = useState<Tab>("providers");
   const [envReady, setEnvReady] = useState<boolean | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
   const { toasts, remove } = useToastContext();
 
   useEffect(() => {
@@ -22,9 +24,14 @@ function AppContent() {
       .catch(() => setEnvReady(false));
   }, []);
 
-  // Keyboard shortcuts: Cmd/Ctrl+1,2,3 for tab switching
+  // Keyboard shortcuts: Cmd/Ctrl+1,2,3 for tab switching, ? for help
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (e.key === "?" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        setShowHelp((prev) => !prev);
+        return;
+      }
       if (!(e.metaKey || e.ctrlKey)) return;
       const map: Record<string, Tab> = {
         "1": "providers",
@@ -106,6 +113,7 @@ function AppContent() {
         {tab === "settings" && <SettingsPanel />}
       </main>
       <ToastContainer toasts={toasts} onRemove={remove} />
+      <ShortcutHelp open={showHelp} onClose={() => setShowHelp(false)} />
     </div>
   );
 }
