@@ -7,8 +7,8 @@
 
 ### Drop → Wait → Get Results · Say Goodbye to Reimbursement Hassles
 
-![Version](https://img.shields.io/badge/Version-1.2.0-blue?style=flat-square)
-![Platform](https://img.shields.io/badge/Platform-macOS|Windows|Web-green?style=flat-square)
+![Version](https://img.shields.io/badge/Version-2.0.3-blue?style=flat-square)
+![Platform](https://img.shields.io/badge/Platform-macOS|Windows|Web|Claude_Code-green?style=flat-square)
 ![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-lightgrey?style=flat-square)
 
@@ -85,16 +85,72 @@ Three usage methods for different scenarios:
 | 💻 Desktop App | macOS (DMG), Windows (EXE) | Daily use, full features |
 | 🌐 Web Version | Browser access, no installation | Temporary use, cross-device |
 | ⌨️ Command Line | Batch processing, automation | Technical users, bulk processing |
+| 🤖 Claude Code Skill | Conversational interaction, zero-config | Claude Code users, AI-native experience |
 
 ![Multi-Platform](./docs/assets/platforms.png)
 
-## Screenshots
+## Claude Code Skill
 
-### Desktop Interface
+> 🆕 New way: Complete reimbursement tasks via natural language in the terminal, no API Key needed, zero configuration.
 
-| Home | Settings | Processing |
-|------|----------|------------|
-| ![Home](./docs/assets/desktop_home.png) | ![Settings](./docs/assets/desktop_settings.png) | ![Processing](./docs/assets/desktop_processing.png) |
+Expense Reimbursement Assistant provides a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) Skill that leverages Claude's native vision capabilities to recognize invoices directly, without relying on PaddleOCR or external APIs.
+
+### Install
+
+```bash
+# Copy the skill to Claude Code skills directory
+cp -r claude-skill ~/.claude/skills/expense-reimbursement
+```
+
+### Usage
+
+In Claude Code, simply say:
+
+```
+Help me organize invoices in ~/Desktop/invoices
+```
+
+Or any instruction containing "reimbursement", "invoice", "organize invoices", or "expense report" will automatically trigger it.
+
+### Workflow
+
+```
+📁 Specify invoice folder
+  ↓
+👁️ Claude views each image/PDF (multimodal vision)
+  ↓
+🏷️ Auto-classification (Taxi / Train-Flight / Accommodation / Meals / Others)
+  ↓
+🔗 Smart pairing (trip receipt + invoice → same folder)
+  ↓
+📂 Organize into standard directory structure
+  ↓
+📊 Generate Excel reimbursement report
+```
+
+### Comparison
+
+| Feature | Desktop/Web/CLI | Claude Code Skill |
+|---------|----------------|-------------------|
+| OCR Engine | PaddleOCR (~100MB install) | Claude native vision |
+| AI Analysis | SiliconFlow API (Key needed) | Claude itself (zero-config) |
+| Python Dependencies | 10+ packages | Only openpyxl (auto-installed) |
+| Interaction | GUI / Web / CLI | Natural language conversation |
+| Target Users | All users | Claude Code users |
+
+---
+
+## Interface Guide
+
+### Desktop App (v2.0.3 Dark Theme)
+
+| Provider Management | Invoice Recognition | Appearance Settings |
+|--------------------|--------------------|--------------------|
+| ![Provider Management](./docs/assets/desktop_home.png) | ![Invoice Recognition](./docs/assets/desktop_processing.png) | ![Appearance Settings](./docs/assets/desktop_settings.png) |
+
+| First-Run Wizard | Add Provider |
+|------------------|-------------|
+| ![First-Run Wizard](./docs/assets/desktop_setup_wizard.png) | ![Add Provider](./docs/assets/desktop_add_provider.png) |
 
 ### Web Interface
 
@@ -106,19 +162,35 @@ Three usage methods for different scenarios:
 
 ### Option 1: Download from Releases (Recommended)
 
-No Python installation required, ready to use out of the box!
+Small size (4–6 MB), built with Tauri v2.
 
-1. Visit the [Releases page](https://github.com/frankfika/ExpenseReimbursement/releases)
+> **Prerequisite**: Invoice recognition requires Python 3.9+ installed on your system. The app will automatically detect and guide installation of Python dependencies on first launch — no manual commands needed.
+
+1. Visit the [Releases page](https://github.com/frankfika/ExpenseReimbursement/releases/latest)
 2. Download the package for your platform:
 
 | Platform | Filename | Size | Download |
 |----------|----------|------|----------|
-| 🍎 macOS | `ExpenseAssistant-1.2.0.dmg` | ~300 MB | [Download](https://github.com/frankfika/ExpenseReimbursement/releases/download/v1.2.0/ExpenseAssistant-1.2.0.dmg) |
-| 🪟 Windows | `ExpenseHelper-1.2.0-windows.exe` | ~150 MB | [Download](https://github.com/frankfika/ExpenseReimbursement/releases/download/v1.2.0/ExpenseHelper-1.2.0-windows.exe) |
+| 🍎 macOS (Apple Silicon) | `ExpenseHelper_2.0.3_aarch64.dmg` | ~6 MB | [Download](https://github.com/frankfika/ExpenseReimbursement/releases/download/v2.0.3/ExpenseHelper_2.0.3_aarch64.dmg) |
+| 🍎 macOS (Intel) | `ExpenseHelper_2.0.3_x64.dmg` | ~6 MB | [Download](https://github.com/frankfika/ExpenseReimbursement/releases/download/v2.0.3/ExpenseHelper_2.0.3_x64.dmg) |
+| 🪟 Windows (x64) | `ExpenseHelper_2.0.3_x64-setup.exe` | ~4 MB | [Download](https://github.com/frankfika/ExpenseReimbursement/releases/download/v2.0.3/ExpenseHelper_2.0.3_x64-setup.exe) |
 
-3. Install and run. API Key configuration will be guided on first launch.
+3. Install and run, then configure Provider and API Key in Settings.
 
-### Option 2: Run from Source
+> **macOS users**: Not code-signed. If you see "damaged" warning on first open, run `xattr -cr /Applications/ExpenseHelper.app` in terminal.
+>
+> **Windows users**: Not code-signed. Click "More info → Run anyway" on SmartScreen warning.
+
+### Option 2: Claude Code Skill (Zero Config)
+
+```bash
+git clone https://github.com/frankfika/ExpenseReimbursement.git
+cp -r ExpenseReimbursement/claude-skill ~/.claude/skills/expense-reimbursement
+```
+
+Then say "help me organize invoices" in Claude Code — no API Key needed.
+
+### Option 3: Run from Source
 
 ```bash
 # Clone the repository
@@ -188,12 +260,13 @@ Reimbursement_Results_20240114/
 
 ```mermaid
 graph LR
-    A[📁 Input Files] --> B[🔍 OCR Recognition]
-    B --> C[PaddleOCR]
-    C --> D[🤖 AI Analysis]
-    D --> E[DeepSeek-V3]
-    E --> F[📂 Classification]
-    F --> G[🔗 Smart Pairing]
+    A[📁 Input Files] --> B{Usage Method}
+    B -->|Desktop/Web/CLI| C[🔍 PaddleOCR]
+    B -->|Claude Code Skill| F[👁️ Claude Vision]
+    C --> D[🤖 DeepSeek-V3]
+    D --> E[📂 Classification]
+    F --> E
+    E --> G[🔗 Smart Pairing]
     G --> H[📊 Generate Report]
     H --> I[📈 Excel Output]
 ```
@@ -202,50 +275,78 @@ graph LR
 
 | Category | Technology | Description |
 |----------|------------|-------------|
-| **OCR Engine** | PaddleOCR | Chinese text recognition |
-| **AI Model** | DeepSeek-V3 | Invoice analysis via SiliconFlow |
+| **OCR Engine** | PaddleOCR / Claude Vision | Chinese text recognition |
+| **AI Model** | DeepSeek-V3 / Claude | Invoice analysis |
 | **PDF Processing** | PyMuPDF, pdf2image | PDF to image conversion |
 | **Web Framework** | Flask | Web version backend |
-| **Desktop GUI** | PyWebView | Desktop app framework |
+| **Desktop GUI** | Tauri v2 + React + Rust | Desktop app framework |
 | **Excel Generation** | openpyxl | Report generation |
-| **Packaging** | PyInstaller | Executable build |
+| **Packaging** | Tauri Bundler | DMG / NSIS builds |
 
 ## Directory Structure
 
 ```
 ExpenseReimbursement/
-├── app/                   # Core modules
-│   ├── config.py         # Configuration management
-│   ├── ocr.py            # OCR text recognition
-│   ├── analyzer.py       # AI invoice analysis
-│   ├── organizer.py      # File classification
-│   └── report.py         # Excel report generation
-├── web/                  # Web resources
-│   ├── templates/        # HTML templates
-│   └── static/           # CSS/JS assets
-├── tests/                # Test suite
-├── releases/             # Build artifacts
-├── docs/assets/          # Documentation images
-├── desktop_app.py        # Desktop app entry
-├── web_app.py           # Web app entry
-├── main.py              # Unified entry point
-└── requirements.txt     # Python dependencies
+├── app/                    # Core modules
+│   ├── config.py          # Configuration management
+│   ├── ocr.py             # OCR text recognition
+│   ├── analyzer.py        # AI invoice analysis
+│   ├── organizer.py       # File classification
+│   └── report.py          # Excel report generation
+├── claude-skill/          # Claude Code Skill
+│   ├── SKILL.md           # Skill definition and workflow
+│   └── scripts/           # Report generation scripts
+│       └── generate_report.py
+├── tauri-app/             # Tauri v2 desktop app
+│   ├── src/               # React frontend
+│   └── src-tauri/         # Rust backend
+├── web/                   # Web resources
+│   ├── templates/         # HTML templates
+│   └── static/            # CSS/JS assets
+├── tests/                 # Test suite
+├── releases/              # Build artifacts
+├── docs/assets/           # Documentation images
+├── desktop_app.py         # Desktop app entry (legacy)
+├── web_app.py            # Web app entry
+├── main.py               # Unified entry point
+└── requirements.txt      # Python dependencies
 ```
 
 ## Changelog
 
-### v1.2.0 (2024-02)
+### v2.0.3 (2026-05)
+- 💄 New dark theme UI: referencing bolt.new modern developer tool style, purple accent + glassmorphism cards
+- 📸 Updated README screenshots to reflect new design
+
+### v2.0.2 (2026-05)
+- ✨ First-run environment setup wizard: auto-detect Python, one-click venv creation and dependency install
+- 🐛 Fixed Tauri app unable to find Python backend (sidecar path resolved from resource_dir)
+- 🐛 Fixed Windows MSI bundling failure (switched to NSIS)
+- 🐛 Fixed GitHub Release asset Chinese filename truncation (artifacts renamed to English)
+
+### v2.0.0 (2026-05)
+- Desktop app rewritten with Tauri v2 + React + Rust, installer size reduced from 150-300 MB to 4-6 MB
+- Multi-Provider configuration management (one-click switch between SiliconFlow / self-hosted / other OpenAI-compatible services)
+- macOS dual-architecture DMG: Apple Silicon (aarch64) + Intel (x64)
+- Legacy PyInstaller desktop entry (`desktop_app.py`) kept as optional source-run method
+
+### v1.3.0 (2026-03)
+- 🤖 Added Claude Code Skill for conversational reimbursement organization
+- ✨ Leverages Claude native vision capabilities, no external API needed
+- 📦 Zero-config installation, only openpyxl dependency required
+
+### v1.2.0 (2026-02)
 - ✨ Added smart pairing feature
 - ✨ Bilingual interface support (Chinese/English)
 - 🐛 Improved recognition accuracy
 - 💄 Enhanced UI experience
 
-### v1.1.0 (2024-01)
+### v1.1.0 (2026-01)
 - ✨ Added PDF invoice recognition
 - ✨ Added web interface
 - 🐛 Fixed build pipeline
 
-### v1.0.0 (2024-01)
+### v1.0.0 (2026-01)
 - 🎉 Initial release
 - ✨ Invoice recognition and auto-classification
 - ✨ Desktop and CLI versions
@@ -256,6 +357,8 @@ ExpenseReimbursement/
 <summary><b>Q: First run is slow?</b></summary>
 
 The first run requires downloading PaddleOCR models (~100MB). Please be patient. Subsequent launches will be fast.
+
+> Using Claude Code Skill requires no model download, works out of the box.
 </details>
 
 <details>
@@ -274,6 +377,8 @@ The first run requires downloading PaddleOCR models (~100MB). Please be patient.
 2. Confirm network connection is working
 3. Ensure your SiliconFlow account has sufficient balance (new users get free credits)
 4. Check if firewall is blocking requests
+
+> Using Claude Code Skill does not require configuring an API Key.
 </details>
 
 <details>
@@ -310,16 +415,17 @@ git push origin feature/your-feature
 ### Release Process
 
 ```bash
-# 1. Update version
-echo '1.2.1' > VERSION
+# 1. Update Tauri version
+# Edit tauri-app/src-tauri/tauri.conf.json and Cargo.toml
+# Change version to new version
 
 # 2. Commit and tag
-git add VERSION
-git commit -m "bump: v1.2.1"
-git tag v1.2.1
+git commit -am "release: v2.x.x"
+git tag v2.x.x
 git push origin main --tags
 
-# 3. GitHub Actions auto-builds Release
+# 3. GitHub Actions auto-builds and publishes Release
+#    (macOS aarch64/x64 + Windows x64)
 ```
 
 ## Acknowledgments
@@ -327,6 +433,7 @@ git push origin main --tags
 - [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) - Chinese OCR engine
 - [DeepSeek](https://deepseek.com/) - AI large language model
 - [SiliconFlow](https://siliconflow.cn/) - API service provider
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) - AI-native development tool
 
 ## License
 
