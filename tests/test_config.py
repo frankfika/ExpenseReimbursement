@@ -11,10 +11,16 @@ class TestConfig:
     def test_is_configured_without_key(self, monkeypatch):
         """测试未配置时返回 False"""
         monkeypatch.setenv("DEEPSEEK_API_KEY", "")
-        # 需要重新导入以获取新的环境变量
         import importlib
         import app.config as config_module
-        importlib.reload(config_module)
+        # Mock providers.json lookup to return no active provider
+        monkeypatch.setattr(config_module, '_cached_config', {
+            "api_key": "",
+            "base_url": "https://api.siliconflow.cn",
+            "text_model": "deepseek-ai/DeepSeek-V3",
+            "vision_model": "Qwen/Qwen2.5-VL-7B-Instruct",
+        })
+        monkeypatch.setattr(config_module, 'DEEPSEEK_API_KEY', "")
         assert config_module.is_configured() is False
 
     def test_is_configured_with_placeholder(self, monkeypatch):
@@ -22,7 +28,13 @@ class TestConfig:
         monkeypatch.setenv("DEEPSEEK_API_KEY", "your_api_key_here")
         import importlib
         import app.config as config_module
-        importlib.reload(config_module)
+        monkeypatch.setattr(config_module, '_cached_config', {
+            "api_key": "your_api_key_here",
+            "base_url": "https://api.siliconflow.cn",
+            "text_model": "deepseek-ai/DeepSeek-V3",
+            "vision_model": "Qwen/Qwen2.5-VL-7B-Instruct",
+        })
+        monkeypatch.setattr(config_module, 'DEEPSEEK_API_KEY', "your_api_key_here")
         assert config_module.is_configured() is False
 
     def test_is_configured_with_valid_key(self, monkeypatch):
@@ -30,7 +42,13 @@ class TestConfig:
         monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-valid-api-key")
         import importlib
         import app.config as config_module
-        importlib.reload(config_module)
+        monkeypatch.setattr(config_module, '_cached_config', {
+            "api_key": "sk-valid-api-key",
+            "base_url": "https://api.siliconflow.cn",
+            "text_model": "deepseek-ai/DeepSeek-V3",
+            "vision_model": "Qwen/Qwen2.5-VL-7B-Instruct",
+        })
+        monkeypatch.setattr(config_module, 'DEEPSEEK_API_KEY', "sk-valid-api-key")
         assert config_module.is_configured() is True
 
 
