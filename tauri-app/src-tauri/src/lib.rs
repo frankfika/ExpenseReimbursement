@@ -51,6 +51,15 @@ pub fn run() {
             sidecar_commands::get_sidecar_port,
             sidecar_commands::stop_sidecar,
         ])
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::Destroyed = event {
+                if window.label() == "main" {
+                    if let Some(sidecar) = window.app_handle().try_state::<Sidecar>() {
+                        sidecar.stop();
+                    }
+                }
+            }
+        })
         .setup(|app| {
             setup_tray(app)?;
             Ok(())
