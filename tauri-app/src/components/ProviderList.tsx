@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Check, Plus, Trash2, Zap } from "lucide-react";
 import { useProviders } from "../hooks/useProviders";
+import { useToastContext } from "../context/ToastContext";
 import type { Provider } from "../types/provider";
 import { AddProviderDialog } from "./AddProviderDialog";
 
 export function ProviderList() {
   const { config, presets, loading, error, addProvider, deleteProvider, activateProvider, testProvider } = useProviders();
+  const toast = useToastContext();
   const [showAdd, setShowAdd] = useState(false);
   const [testing, setTesting] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<{ id: string; ok: boolean; msg: string } | null>(null);
@@ -37,16 +39,27 @@ export function ProviderList() {
     try {
       const msg = await testProvider(id);
       setTestResult({ id, ok: true, msg });
+      toast.success(msg);
     } catch (e: any) {
-      setTestResult({ id, ok: false, msg: e });
+      const err = String(e);
+      setTestResult({ id, ok: false, msg: err });
+      toast.error(err);
     } finally {
       setTesting(null);
     }
   };
 
   const handleDelete = async (p: Provider) => {
-    if (!confirm(`确定删除 "${p.name}" 吗？`)) return;
-    await deleteProvider(p.id);
+    const confirmed = await new Promise<boolean>((resolve) => {
+      resolve(window.confirm(`确定删除 "${p.name}" 吗？`));
+    });
+    if (!confirmed) return;
+    try {
+      await deleteProvider(p.id);
+      toast.success(`已删除 "${p.name}"`);
+    } catch (e: any) {
+      toast.error("删除失败: " + String(e));
+    }
   };
 
   return (

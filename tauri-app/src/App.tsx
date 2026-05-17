@@ -4,13 +4,16 @@ import { ProviderList } from "./components/ProviderList";
 import { UploadPanel } from "./components/UploadPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { SetupWizard } from "./components/SetupWizard";
+import { ToastContainer } from "./components/ToastContainer";
+import { ToastProvider, useToastContext } from "./context/ToastContext";
 import { invoke } from "./lib/tauri";
 
 type Tab = "providers" | "upload" | "settings";
 
-function App() {
+function AppContent() {
   const [tab, setTab] = useState<Tab>("providers");
   const [envReady, setEnvReady] = useState<boolean | null>(null);
+  const { toasts, remove } = useToastContext();
 
   useEffect(() => {
     invoke<{ packages_ready: boolean }>("check_python_env")
@@ -44,6 +47,7 @@ function App() {
         <main className="flex-1 overflow-y-auto">
           <SetupWizard onReady={() => setEnvReady(true)} />
         </main>
+        <ToastContainer toasts={toasts} onRemove={remove} />
       </div>
     );
   }
@@ -85,7 +89,16 @@ function App() {
         {tab === "upload" && <UploadPanel />}
         {tab === "settings" && <SettingsPanel />}
       </main>
+      <ToastContainer toasts={toasts} onRemove={remove} />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   );
 }
 

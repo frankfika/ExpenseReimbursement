@@ -2,11 +2,13 @@ import { useState, useEffect } from "react";
 import { invoke } from "../lib/tauri";
 import { Sun, Moon, Monitor, RotateCcw, Clock } from "lucide-react";
 import type { UiPrefs } from "../types/provider";
+import { useToastContext } from "../context/ToastContext";
 
 export function SettingsPanel() {
   const [theme, setTheme] = useState<string>("system");
   const [backups, setBackups] = useState<string[]>([]);
   const [restoring, setRestoring] = useState(false);
+  const toast = useToastContext();
 
   useEffect(() => {
     invoke<{ active_id: string; providers: any[]; ui: UiPrefs }>("get_config").then((cfg) => {
@@ -34,17 +36,25 @@ export function SettingsPanel() {
   const changeTheme = async (t: string) => {
     setTheme(t);
     applyTheme(t);
-    try { await invoke("update_ui_prefs", { prefs: { theme: t, language: "zh" } }); } catch {}
+    try {
+      await invoke("update_ui_prefs", { prefs: { theme: t, language: "zh" } });
+    } catch {
+      toast.error("主题保存失败");
+    }
   };
 
   const handleRestore = async (filename: string) => {
-    if (!confirm(`确定恢复备份 ${filename}？当前配置将被覆盖。`)) return;
+    const confirmed = await new Promise<boolean>((resolve) => {
+      resolve(window.confirm(`确定恢复备份 ${filename}？当前配置将被覆盖。`));
+    });
+    if (!confirmed) return;
     setRestoring(true);
     try {
       await invoke("restore_backup", { filename });
-      window.location.reload();
+      toast.success("配置已恢复，页面即将刷新");
+      setTimeout(() => window.location.reload(), 1200);
     } catch (e: any) {
-      alert("恢复失败: " + e);
+      toast.error("恢复失败: " + String(e));
     } finally {
       setRestoring(false);
     }
