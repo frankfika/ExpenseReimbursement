@@ -21,6 +21,25 @@ function AppContent() {
       .catch(() => setEnvReady(false));
   }, []);
 
+  // Keyboard shortcuts: Cmd/Ctrl+1,2,3 for tab switching
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const map: Record<string, Tab> = {
+        "1": "providers",
+        "2": "upload",
+        "3": "settings",
+      };
+      const tab = map[e.key];
+      if (tab) {
+        e.preventDefault();
+        setTab(tab);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   if (envReady === null) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -63,24 +82,20 @@ function AppContent() {
           <p className="mt-0.5 text-[11px] text-surface-500">AI 智能发票识别与报销整理</p>
         </div>
         <nav className="flex gap-1.5">
-          <button
-            className={tab === "providers" ? "nav-item-active" : "nav-item-inactive"}
-            onClick={() => setTab("providers")}
-          >
-            <Settings size={14} /> Providers
-          </button>
-          <button
-            className={tab === "upload" ? "nav-item-active" : "nav-item-inactive"}
-            onClick={() => setTab("upload")}
-          >
-            <Upload size={14} /> 识别
-          </button>
-          <button
-            className={tab === "settings" ? "nav-item-active" : "nav-item-inactive"}
-            onClick={() => setTab("settings")}
-          >
-            <Sparkles size={14} /> 外观
-          </button>
+          {([
+            { id: "providers" as Tab, label: "Providers", icon: Settings, shortcut: "1" },
+            { id: "upload" as Tab, label: "识别", icon: Upload, shortcut: "2" },
+            { id: "settings" as Tab, label: "外观", icon: Sparkles, shortcut: "3" },
+          ]).map((item) => (
+            <button
+              key={item.id}
+              className={tab === item.id ? "nav-item-active" : "nav-item-inactive"}
+              onClick={() => setTab(item.id)}
+              title={`${item.label} (Ctrl+${item.shortcut})`}
+            >
+              <item.icon size={14} /> {item.label}
+            </button>
+          ))}
         </nav>
       </header>
 
