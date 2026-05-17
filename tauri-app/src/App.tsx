@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Receipt, Settings, Upload, Palette } from "lucide-react";
+import { Receipt, Settings, Upload, Sparkles } from "lucide-react";
 import { ProviderList } from "./components/ProviderList";
 import { UploadPanel } from "./components/UploadPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
@@ -20,8 +20,11 @@ function App() {
 
   if (envReady === null) {
     return (
-      <div className="flex h-full items-center justify-center text-slate-500">
-        <div className="animate-pulse text-sm">加载中...</div>
+      <div className="flex h-full items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+          <p className="text-sm text-surface-500">正在初始化...</p>
+        </div>
       </div>
     );
   }
@@ -29,13 +32,13 @@ function App() {
   if (!envReady) {
     return (
       <div className="flex h-full flex-col">
-        <header className="flex items-center gap-3 border-b border-slate-200 bg-white/80 px-6 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
+        <header className="flex items-center gap-3 border-b border-white/[0.06] bg-surface-950/80 px-6 py-3.5 backdrop-blur-xl">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white shadow-glow">
             <Receipt size={18} />
           </div>
           <div>
-            <h1 className="text-sm font-semibold leading-none">报销助手</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">v2.0 · Tauri Edition</p>
+            <h1 className="text-sm font-semibold leading-none text-surface-100">报销助手</h1>
+            <p className="mt-0.5 text-[11px] text-surface-500">v2.0 · Tauri Edition</p>
           </div>
         </header>
         <main className="flex-1 overflow-y-auto">
@@ -47,32 +50,32 @@ function App() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex items-center gap-3 border-b border-slate-200 bg-white/80 px-6 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
+      <header className="flex items-center gap-3 border-b border-white/[0.06] bg-surface-950/80 px-6 py-3.5 backdrop-blur-xl">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white shadow-glow">
           <Receipt size={18} />
         </div>
         <div className="mr-auto">
-          <h1 className="text-sm font-semibold leading-none">报销助手</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">v2.0 · Tauri Edition</p>
+          <h1 className="text-sm font-semibold leading-none text-surface-100">报销助手</h1>
+          <p className="mt-0.5 text-[11px] text-surface-500">AI 智能发票识别与报销整理</p>
         </div>
-        <nav className="flex gap-1">
+        <nav className="flex gap-1.5">
           <button
-            className={`btn-ghost text-xs ${tab === "providers" ? "bg-slate-100 dark:bg-slate-800" : ""}`}
+            className={tab === "providers" ? "nav-item-active" : "nav-item-inactive"}
             onClick={() => setTab("providers")}
           >
             <Settings size={14} /> Providers
           </button>
           <button
-            className={`btn-ghost text-xs ${tab === "upload" ? "bg-slate-100 dark:bg-slate-800" : ""}`}
+            className={tab === "upload" ? "nav-item-active" : "nav-item-inactive"}
             onClick={() => setTab("upload")}
           >
             <Upload size={14} /> 识别
           </button>
           <button
-            className={`btn-ghost text-xs ${tab === "settings" ? "bg-slate-100 dark:bg-slate-800" : ""}`}
+            className={tab === "settings" ? "nav-item-active" : "nav-item-inactive"}
             onClick={() => setTab("settings")}
           >
-            <Palette size={14} /> 外观
+            <Sparkles size={14} /> 外观
           </button>
         </nav>
       </header>

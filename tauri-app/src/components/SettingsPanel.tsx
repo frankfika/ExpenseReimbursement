@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { invoke } from "../lib/tauri";
-import { Sun, Moon, Monitor, RotateCcw } from "lucide-react";
+import { Sun, Moon, Monitor, RotateCcw, Clock } from "lucide-react";
 import type { UiPrefs } from "../types/provider";
 
 export function SettingsPanel() {
@@ -59,36 +59,44 @@ export function SettingsPanel() {
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <div>
-        <h2 className="text-base font-semibold mb-3">外观</h2>
+        <h2 className="text-lg font-semibold text-surface-100 mb-1">外观</h2>
+        <p className="text-xs text-surface-500 mb-4">选择您喜欢的界面主题</p>
         <div className="flex gap-2">
           {themes.map((t) => (
             <button
               key={t.id}
-              className={`card flex flex-1 flex-col items-center gap-1.5 p-3 transition-shadow hover:shadow-card-hover ${theme === t.id ? "ring-2 ring-brand-500" : ""}`}
+              className={`card flex flex-1 flex-col items-center gap-2 p-4 transition-all ${theme === t.id ? "ring-1 ring-brand-500 shadow-glow" : "hover:ring-1 hover:ring-white/[0.06]"}`}
               onClick={() => changeTheme(t.id)}
             >
-              <t.icon size={20} className={theme === t.id ? "text-brand-600" : "text-slate-400"} />
-              <span className="text-xs">{t.label}</span>
+              <t.icon size={20} className={theme === t.id ? "text-brand-400" : "text-surface-500"} />
+              <span className="text-xs text-surface-300">{t.label}</span>
             </button>
           ))}
         </div>
       </div>
 
       <div>
-        <h2 className="text-base font-semibold mb-3">备份恢复</h2>
+        <h2 className="text-lg font-semibold text-surface-100 mb-1">备份恢复</h2>
+        <p className="text-xs text-surface-500 mb-4">从自动备份中恢复 Provider 配置</p>
         {backups.length === 0 ? (
-          <p className="text-xs text-slate-400">暂无备份</p>
+          <div className="card flex items-center gap-3 p-4">
+            <Clock size={16} className="text-surface-600" />
+            <p className="text-xs text-surface-500">暂无备份</p>
+          </div>
         ) : (
-          <div className="card divide-y divide-slate-100 dark:divide-slate-800">
+          <div className="card divide-y divide-white/[0.04]">
             {backups.slice(0, 10).map((b) => (
-              <div key={b} className="flex items-center justify-between px-4 py-2.5">
-                <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">{b}</span>
+              <div key={b} className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <Clock size={13} className="text-surface-600" />
+                  <span className="text-xs text-surface-400 font-mono">{b}</span>
+                </div>
                 <button
-                  className="btn-ghost text-xs"
+                  className="rounded-lg px-2.5 py-1 text-xs text-surface-500 hover:bg-surface-800 hover:text-surface-300 transition-colors"
                   onClick={() => handleRestore(b)}
                   disabled={restoring}
                 >
-                  <RotateCcw size={12} /> 恢复
+                  <RotateCcw size={11} className="inline mr-1" /> 恢复
                 </button>
               </div>
             ))}

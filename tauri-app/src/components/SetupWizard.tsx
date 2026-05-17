@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { invoke } from "../lib/tauri";
-import { Terminal, Loader2, CheckCircle, AlertCircle, Download } from "lucide-react";
+import { Terminal, Loader2, CheckCircle, AlertCircle, Download, ExternalLink } from "lucide-react";
 
 interface EnvStatus {
   python_found: boolean;
@@ -63,9 +63,9 @@ export function SetupWizard({ onReady }: { onReady: () => void }) {
 
   if (checking) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 text-slate-500">
-        <Loader2 size={24} className="animate-spin text-brand-500" />
-        <p className="text-sm">正在检测 Python 环境...</p>
+      <div className="flex h-full flex-col items-center justify-center gap-3">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+        <p className="text-sm text-surface-500">正在检测 Python 环境...</p>
       </div>
     );
   }
@@ -73,31 +73,37 @@ export function SetupWizard({ onReady }: { onReady: () => void }) {
   return (
     <div className="mx-auto max-w-md space-y-5 py-12">
       <div className="text-center">
-        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-600">
-          <Terminal size={24} />
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-600/10 text-brand-400 ring-1 ring-brand-500/20">
+          <Terminal size={26} />
         </div>
-        <h2 className="text-base font-semibold">环境配置</h2>
-        <p className="mt-1 text-xs text-slate-500">
+        <h2 className="text-lg font-semibold text-surface-100">环境配置</h2>
+        <p className="mt-1 text-xs text-surface-500">
           发票识别功能依赖 Python 后端，需要完成一次性环境配置
         </p>
       </div>
 
       {status?.python_found ? (
-        <div className="card space-y-3 p-4">
-          <div className="flex items-center gap-2 text-sm text-emerald-600">
-            <CheckCircle size={16} />
-            <span>检测到 Python: {status.python_path}</span>
+        <div className="card space-y-4 p-5">
+          <div className="flex items-center gap-2 text-sm text-emerald-400">
+            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/10">
+              <CheckCircle size={13} />
+            </div>
+            <span>检测到 Python: <code className="rounded-md bg-surface-800 px-1.5 py-0.5 text-[11px] text-surface-300">{status.python_path}</code></span>
           </div>
 
           {status.packages_ready ? (
-            <div className="flex items-center gap-2 text-sm text-emerald-600">
-              <CheckCircle size={16} />
+            <div className="flex items-center gap-2 text-sm text-emerald-400">
+              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/10">
+                <CheckCircle size={13} />
+              </div>
               <span>依赖已就绪</span>
             </div>
           ) : (
             <>
-              <div className="flex items-center gap-2 text-sm text-amber-600">
-                <AlertCircle size={16} />
+              <div className="flex items-center gap-2 text-sm text-amber-400">
+                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500/10">
+                  <AlertCircle size={13} />
+                </div>
                 <span>缺少依赖: {status.missing_packages.join(", ")}</span>
               </div>
 
@@ -113,8 +119,8 @@ export function SetupWizard({ onReady }: { onReady: () => void }) {
                   )}
                 </div>
               ) : (
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <Loader2 size={14} className="animate-spin" />
+                <div className="flex items-center gap-2 text-xs text-surface-500">
+                  <Loader2 size={14} className="animate-spin text-brand-500" />
                   {installLog}
                 </div>
               )}
@@ -122,17 +128,24 @@ export function SetupWizard({ onReady }: { onReady: () => void }) {
           )}
         </div>
       ) : (
-        <div className="card space-y-3 p-4">
-          <div className="flex items-center gap-2 text-sm text-rose-600">
-            <AlertCircle size={16} />
+        <div className="card space-y-4 p-5">
+          <div className="flex items-center gap-2 text-sm text-rose-400">
+            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-500/10">
+              <AlertCircle size={13} />
+            </div>
             <span>未检测到 Python</span>
           </div>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-surface-500">
             请安装 Python 3.9+ 后重新打开应用。
           </p>
-          <div className="space-y-1 text-xs text-slate-600">
-            <p><strong>macOS:</strong> brew install python3</p>
-            <p><strong>Windows:</strong> <a href="https://python.org/downloads" target="_blank" rel="noreferrer" className="text-brand-600 underline">python.org/downloads</a></p>
+          <div className="space-y-1.5 text-xs text-surface-400">
+            <p><span className="text-surface-500">macOS:</span> brew install python3</p>
+            <p className="flex items-center gap-1">
+              <span className="text-surface-500">Windows:</span>
+              <a href="https://python.org/downloads" target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 text-brand-400 hover:text-brand-300">
+                python.org/downloads <ExternalLink size={10} />
+              </a>
+            </p>
           </div>
           <button className="btn-secondary text-xs w-full" onClick={checkEnv}>
             重新检测
@@ -141,7 +154,7 @@ export function SetupWizard({ onReady }: { onReady: () => void }) {
       )}
 
       {error && (
-        <div className="rounded-lg bg-rose-50 p-3 text-xs text-rose-700">
+        <div className="rounded-xl bg-rose-500/10 p-3 text-xs text-rose-400 ring-1 ring-rose-500/20">
           {error}
         </div>
       )}

@@ -7,7 +7,7 @@
 
 ### 扔进去 → 等一下 → 拿结果 · 让报销从此告别繁琐
 
-![Version](https://img.shields.io/badge/Version-2.0.2-blue?style=flat-square)
+![Version](https://img.shields.io/badge/Version-2.0.3-blue?style=flat-square)
 ![Platform](https://img.shields.io/badge/Platform-macOS|Windows|Web|Claude_Code-green?style=flat-square)
 ![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-lightgrey?style=flat-square)
@@ -142,11 +142,15 @@ cp -r claude-skill ~/.claude/skills/expense-reimbursement
 
 ## 界面导览
 
-### 桌面版界面
+### 桌面版界面（v2.0.3 深色主题）
 
-| 主界面 | 设置页面 | 处理中 |
-|--------|---------|--------|
-| ![主界面](./docs/assets/desktop_home.png) | ![设置](./docs/assets/desktop_settings.png) | ![处理](./docs/assets/desktop_processing.png) |
+| Provider 管理 | 发票识别 | 外观设置 |
+|--------------|---------|---------|
+| ![Provider 管理](./docs/assets/desktop_home.png) | ![发票识别](./docs/assets/desktop_processing.png) | ![外观设置](./docs/assets/desktop_settings.png) |
+
+| 首次启动向导 | 添加 Provider |
+|-------------|--------------|
+| ![首次启动向导](./docs/assets/desktop_setup_wizard.png) | ![添加 Provider](./docs/assets/desktop_add_provider.png) |
 
 ### Web 版界面
 
@@ -167,9 +171,9 @@ cp -r claude-skill ~/.claude/skills/expense-reimbursement
 
 | 平台 | 文件名 | 大小 | 下载 |
 |------|--------|------|------|
-| 🍎 macOS (Apple Silicon) | `ExpenseHelper_2.0.2_aarch64.dmg` | ~6 MB | [下载](https://github.com/frankfika/ExpenseReimbursement/releases/download/v2.0.2/ExpenseHelper_2.0.2_aarch64.dmg) |
-| 🍎 macOS (Intel) | `ExpenseHelper_2.0.2_x64.dmg` | ~6 MB | [下载](https://github.com/frankfika/ExpenseReimbursement/releases/download/v2.0.2/ExpenseHelper_2.0.2_x64.dmg) |
-| 🪟 Windows (x64) | `ExpenseHelper_2.0.2_x64-setup.exe` | ~4 MB | [下载](https://github.com/frankfika/ExpenseReimbursement/releases/download/v2.0.2/ExpenseHelper_2.0.2_x64-setup.exe) |
+| 🍎 macOS (Apple Silicon) | `ExpenseHelper_2.0.3_aarch64.dmg` | ~6 MB | [下载](https://github.com/frankfika/ExpenseReimbursement/releases/download/v2.0.3/ExpenseHelper_2.0.3_aarch64.dmg) |
+| 🍎 macOS (Intel) | `ExpenseHelper_2.0.3_x64.dmg` | ~6 MB | [下载](https://github.com/frankfika/ExpenseReimbursement/releases/download/v2.0.3/ExpenseHelper_2.0.3_x64.dmg) |
+| 🪟 Windows (x64) | `ExpenseHelper_2.0.3_x64-setup.exe` | ~4 MB | [下载](https://github.com/frankfika/ExpenseReimbursement/releases/download/v2.0.3/ExpenseHelper_2.0.3_x64-setup.exe) |
 
 3. 安装并运行，进入设置配置 Provider 和 API Key
 
@@ -314,6 +318,10 @@ ExpenseReimbursement/
 ```
 
 ## 版本演进
+
+### v2.0.3 (2026-05)
+- 💄 全新深色主题 UI：参考 bolt.new 现代开发者工具风格，紫色主色调 + 玻璃态卡片
+- 📸 更新 README 截图，展示新界面设计
 
 ### v2.0.2 (2026-05)
 - ✨ 新增首次启动环境配置向导：自动检测 Python，一键创建虚拟环境并安装依赖

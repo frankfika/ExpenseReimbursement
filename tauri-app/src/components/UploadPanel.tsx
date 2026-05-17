@@ -51,8 +51,8 @@ export function UploadPanel() {
   if (notTauri) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-        <p className="text-sm text-slate-500">识别功能需要桌面应用环境</p>
-        <p className="text-xs text-slate-400">请通过 Tauri 桌面应用启动，而非浏览器直接访问。</p>
+        <p className="text-sm text-surface-500">识别功能需要桌面应用环境</p>
+        <p className="text-xs text-surface-600">请通过 Tauri 桌面应用启动，而非浏览器直接访问。</p>
       </div>
     );
   }
@@ -119,20 +119,28 @@ export function UploadPanel() {
   if (taskId && status) {
     return (
       <div className="mx-auto max-w-lg space-y-4">
-        <h2 className="text-base font-semibold">处理进度</h2>
-        <div className="card p-5 space-y-3">
+        <div>
+          <h2 className="text-lg font-semibold text-surface-100">处理进度</h2>
+          <p className="text-xs text-surface-500">发票识别与分类中</p>
+        </div>
+        <div className="card p-5 space-y-4">
           {status.status === "completed" ? (
             <>
-              <p className="text-sm text-emerald-600 font-medium">处理完成</p>
+              <div className="flex items-center gap-2 text-sm text-emerald-400">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/10">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+                <span className="font-medium">处理完成</span>
+              </div>
               {status.summary && (
-                <div className="space-y-1 text-xs text-slate-600">
+                <div className="space-y-2 text-sm">
                   {Object.entries(status.summary).map(([cat, info]) => (
-                    <div key={cat} className="flex justify-between">
+                    <div key={cat} className="flex justify-between text-surface-300">
                       <span>{cat}</span>
-                      <span>{info.count} 张 · ¥{info.amount.toFixed(2)}</span>
+                      <span className="text-surface-400">{info.count} 张 · ¥{info.amount.toFixed(2)}</span>
                     </div>
                   ))}
-                  <div className="border-t pt-1 font-medium flex justify-between">
+                  <div className="border-t border-white/[0.06] pt-2 font-medium flex justify-between text-surface-100">
                     <span>合计</span>
                     <span>¥{status.total_amount?.toFixed(2)}</span>
                   </div>
@@ -147,17 +155,25 @@ export function UploadPanel() {
             </>
           ) : status.status === "error" ? (
             <>
-              <p className="text-sm text-rose-600">{status.error}</p>
+              <div className="flex items-center gap-2 text-sm text-rose-400">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-500/10">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 3V7M6 9H6.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                </div>
+                <span>处理失败</span>
+              </div>
+              <p className="text-xs text-rose-400/80">{status.error}</p>
               <button className="btn-secondary text-xs" onClick={reset}>重试</button>
             </>
           ) : (
             <>
-              <div className="flex items-center gap-2">
-                <Loader2 size={16} className="animate-spin text-brand-500" />
-                <span className="text-sm">{status.current}/{status.total}</span>
+              <div className="flex items-center gap-3">
+                <Loader2 size={18} className="animate-spin text-brand-500" />
+                <div>
+                  <p className="text-sm text-surface-200">{status.current} / {status.total}</p>
+                  <p className="text-[11px] text-surface-500 mt-0.5 truncate max-w-[280px]">{status.current_file}</p>
+                </div>
               </div>
-              <p className="text-xs text-slate-500 truncate">{status.current_file}</p>
-              <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+              <div className="h-1.5 rounded-full bg-surface-800 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-brand-500 transition-all"
                   style={{ width: `${status.total ? (status.current / status.total) * 100 : 0}%` }}
@@ -172,30 +188,35 @@ export function UploadPanel() {
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
-      <h2 className="text-base font-semibold">发票识别</h2>
+      <div>
+        <h2 className="text-lg font-semibold text-surface-100">发票识别</h2>
+        <p className="text-xs text-surface-500">选择包含发票图片的文件夹开始处理</p>
+      </div>
 
       {starting && (
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <Loader2 size={14} className="animate-spin" /> 正在启动识别引擎...
+        <div className="flex items-center gap-2 text-xs text-surface-500">
+          <Loader2 size={14} className="animate-spin text-brand-500" /> 正在启动识别引擎...
         </div>
       )}
 
       <div
-        className="card flex flex-col items-center gap-3 border-2 border-dashed border-slate-200 p-10 text-center cursor-pointer hover:border-brand-400 transition-colors"
+        className="card flex flex-col items-center gap-3 border-2 border-dashed border-surface-700/50 p-12 text-center cursor-pointer hover:border-brand-500/40 transition-colors"
         onClick={selectFolder}
       >
-        <FolderOpen size={32} className="text-slate-300" />
-        <p className="text-sm text-slate-600">点击选择发票文件夹</p>
-        <p className="text-xs text-slate-400">支持 JPG、PNG、PDF</p>
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-800">
+          <FolderOpen size={28} className="text-surface-500" />
+        </div>
+        <p className="text-sm text-surface-300">点击选择发票文件夹</p>
+        <p className="text-xs text-surface-600">支持 JPG、PNG、PDF</p>
       </div>
 
       {files.length > 0 && (
-        <div className="card p-4 space-y-2">
-          <p className="text-xs font-medium text-slate-600">
-            <FileText size={12} className="inline mr-1" />
-            已选 {files.length} 个文件
-          </p>
-          {error && <p className="text-xs text-rose-600">{error}</p>}
+        <div className="card p-4 space-y-3">
+          <div className="flex items-center gap-2 text-xs text-surface-400">
+            <FileText size={13} />
+            <span>已选 {files.length} 个文件</span>
+          </div>
+          {error && <p className="text-xs text-rose-400">{error}</p>}
           <div className="flex gap-2">
             <button className="btn-primary text-xs" onClick={startProcessing}>
               <UploadIcon size={14} /> 开始处理
