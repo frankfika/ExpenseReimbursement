@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { invoke } from "../lib/tauri";
 import { open } from "@tauri-apps/plugin-dialog";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Upload as UploadIcon, FolderOpen, FileText, Download, Loader2 } from "lucide-react";
 
 interface TaskStatus {
@@ -21,12 +22,58 @@ export function UploadPanel() {
   const [status, setStatus] = useState<TaskStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notTauri, setNotTauri] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const dragTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     invoke<number>("get_sidecar_port").then((p) => {
       if (p > 0) setPort(p);
     }).catch(() => setNotTauri(true));
   }, []);
+
+  // Native drag-and-drop via Tauri window events
+  useEffect(() => {
+    if (notTauri) return;
+    const appWindow = getCurrentWebviewWindow();
+    const unlisten = appWindow.onDragDropEvent((event) => {
+      if (event.payload.type === 'over') {
+        setDragOver(true);
+        if (dragTimeoutRef.current) clearTimeout(dragTimeoutRef.current);
+      } else if (event.payload.type === 'drop') {
+        setDragOver(false);
+        const paths = event.payload.paths;
+        if (paths.length > 0 && !taskId) {
+          // Deduplicate and filter to supported extensions
+          const supportedExt = new Set(['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp', '.pdf']);
+          const collected: string[] = [];
+          const seen = new Set<string>();
+          for (const p of paths) {
+            if (seen.has(p)) continue;
+            seen.add(p);
+            const ext = p.slice(p.lastIndexOf('.')).toLowerCase();
+            if (supportedExt.has(ext)) {
+              collected.push(p);
+            }
+          }
+          if (collected.length > 0) {
+            setFiles((prev) => {
+              const merged = [...prev];
+              const existing = new Set(merged);
+              for (const f of collected) {
+                if (!existing.has(f)) merged.push(f);
+              }
+              return merged;
+            });
+          }
+        }
+      } else if (event.payload.type === 'leave') {
+        // Debounce leave to avoid flickering when dragging over child elements
+        if (dragTimeoutRef.current) clearTimeout(dragTimeoutRef.current);
+        dragTimeoutRef.current = setTimeout(() => setDragOver(false), 100);
+      }
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, [notTauri, taskId]);
 
   // Poll status
   useEffect(() => {
@@ -200,14 +247,28 @@ export function UploadPanel() {
       )}
 
       <div
-        className="card flex flex-col items-center gap-3 border-2 border-dashed border-surface-700/50 p-12 text-center cursor-pointer hover:border-brand-500/40 transition-colors"
+        className={`card relative flex flex-col items-center gap-3 border-2 border-dashed p-12 text-center cursor-pointer transition-colors ${
+          dragOver
+            ? "border-brand-500 bg-brand-600/5"
+            : "border-surface-700/50 hover:border-brand-500/40"
+        }`}
         onClick={selectFolder}
       >
+        {dragOver && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-brand-600/10 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-2">
+              <UploadIcon size={32} className="text-brand-400" />
+              <p className="text-sm font-medium text-brand-300">松开以添加文件</p>
+            </div>
+          </div>
+        )}
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-800">
           <FolderOpen size={28} className="text-surface-500" />
         </div>
-        <p className="text-sm text-surface-300">点击选择发票文件夹</p>
-        <p className="text-xs text-surface-600">支持 JPG、PNG、PDF</p>
+        <p className="text-sm text-surface-300">
+          {dragOver ? "松开以添加文件" : "点击选择发票文件夹"}
+        </p>
+        <p className="text-xs text-surface-600">支持拖拽文件或文件夹 · JPG、PNG、PDF</p>
       </div>
 
       {files.length > 0 && (
