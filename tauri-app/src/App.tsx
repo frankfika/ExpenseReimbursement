@@ -6,6 +6,7 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import { SetupWizard } from "./components/SetupWizard";
 import { ToastContainer } from "./components/ToastContainer";
 import { ToastProvider, useToastContext } from "./context/ToastContext";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { invoke } from "./lib/tauri";
 
 type Tab = "providers" | "upload" | "settings";
@@ -111,9 +112,11 @@ function AppContent() {
 
 function App() {
   return (
-    <ToastProvider>
-      <AppContent />
-    </ToastProvider>
+    <ErrorBoundary>
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }
 
