@@ -1,6 +1,6 @@
 [package]
 name = "expense-helper"
-version = "2.0.3"
+version = "2.0.4"
 description = "AI 智能发票识别与报销整理"
 authors = ["frankfika"]
 edition = "2021"
