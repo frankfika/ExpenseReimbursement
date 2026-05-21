@@ -7,7 +7,7 @@
 
 ### 扔进去 → 等一下 → 拿结果 · 让报销从此告别繁琐
 
-![Version](https://img.shields.io/badge/Version-2.0.3-blue?style=flat-square)
+![Version](https://img.shields.io/badge/Version-2.0.4-blue?style=flat-square)
 ![Platform](https://img.shields.io/badge/Platform-macOS|Windows|Web|Claude_Code-green?style=flat-square)
 ![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-lightgrey?style=flat-square)
