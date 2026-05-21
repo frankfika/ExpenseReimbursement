@@ -68,7 +68,7 @@ function AppContent() {
           </div>
           <div>
             <h1 className="text-sm font-semibold leading-none text-surface-100">报销助手</h1>
-            <p className="mt-0.5 text-[11px] text-surface-500">v2.0.3 · Tauri Edition</p>
+            <p className="mt-0.5 text-[11px] text-surface-500">v2.0.5 · Tauri Edition</p>
           </div>
         </header>
         <main className="flex-1 overflow-y-auto">
